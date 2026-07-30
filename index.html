@@ -139,6 +139,8 @@
   .opt.correct{background:var(--signal-bg);border-color:var(--signal)} .opt.correct .k{color:var(--signal)}
   .opt.wrong{background:var(--err-bg);border-color:var(--err)} .opt.wrong .k{color:var(--err)}
   .opt.muted{opacity:.5}
+  .eegbox{background:#0f2136;border-radius:10px;padding:14px 10px;margin:4px 0 14px;overflow:hidden}
+  .eegbox svg{display:block;width:100%;height:auto}
   .exp{margin-top:4px;font-size:14px;padding:12px 13px;border-radius:9px;background:#f2efe4;
     border:1px dashed var(--line);display:none} .exp.show{display:block} .exp b{color:var(--signal)}
   .qtext{font-size:17.5px;font-weight:600;margin:4px 0 14px}
@@ -276,6 +278,93 @@
    quiz  = { scen?, q, opts[], a(index), ex(html) }
    cheat = { h, rows:[[c1,c2,...]], headers:[...], hook? }  (any field optional)
    ===================================================================== */
+/* ---- EEG waveform SVG generators (original, drawn from course patterns) ---- */
+const EEG = (function(){
+  const W=680, H=150, MIDY=H/2, TRACE="#e8542f", GRID="#22384f", TXT="#7fb5a5";
+  function frame(inner, label){
+    return `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
+      <rect x="0" y="0" width="${W}" height="${H}" fill="none"/>
+      <line x1="0" y1="${MIDY}" x2="${W}" y2="${MIDY}" stroke="${GRID}" stroke-width="1"/>
+      ${inner}
+      ${label?`<text x="8" y="18" fill="${TXT}" font-family="monospace" font-size="12">${label}</text>`:''}
+    </svg>`;
+  }
+  function path(fn, x0, x1, step){
+    x0=x0||10; x1=x1||(W-10); step=step||3;
+    let d="M "+x0+" "+fn(x0);
+    for(let x=x0+step;x<=x1;x+=step){ d+=" L "+x.toFixed(1)+" "+fn(x).toFixed(1); }
+    return `<path d="${d}" fill="none" stroke="${TRACE}" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>`;
+  }
+  // rhythm: approximate a frequency in Hz across the window (visual, not literal)
+  function rhythm(hz){
+    const amp = hz<=3?46 : hz<=5?36 : hz<=8?30 : hz<=13?24 : 15;   // slower = taller
+    const cyclesPerPx = hz/95;                                      // visual scaling
+    const fn = x => MIDY - amp*Math.sin((x-10)*cyclesPerPx*2*Math.PI)
+                        - (hz<=3? 6*Math.sin((x-10)*cyclesPerPx*2*Math.PI*0.5):0);
+    return frame(path(fn));
+  }
+  // fast activity that fades into slowing halfway across
+  function fastLoss(){
+    const fn = x=>{
+      const t=(x-10)/(W-20);
+      if(t<0.45){ return MIDY - 16*Math.sin((x-10)*0.9); }        // fast beta
+      const k=(t-0.45)/0.55;                                       // transition
+      return MIDY - (16*(1-k)*Math.sin((x-10)*0.9)) - (34*k*Math.sin((x-10)*0.10));
+    };
+    return frame(path(fn), "fast \u2192 slow");
+  }
+  function flat(){
+    const fn = x=> MIDY + (Math.random()*2-1)*1.2;                 // near-flat with tiny noise
+    return frame(path(fn), "isoelectric");
+  }
+  function burstSupp(){
+    // bursts in windows, flat between
+    const bursts=[[30,150],[250,370],[470,590]];
+    const fn = x=>{
+      for(const [a,b] of bursts){ if(x>=a&&x<=b){ return MIDY - 30*Math.sin((x-a)*0.6)*Math.exp(-((x-(a+b)/2)**2)/6000); } }
+      return MIDY + (Math.random()*2-1)*1;
+    };
+    return frame(path(fn,10,W-10,2.5), "burst \u2014 suppression");
+  }
+  function asymmetry(){
+    const A=H*0.28, B=H*0.72;
+    const fnTop = x=> A - 14*Math.sin((x-10)*0.85);                // normal fast
+    const fnBot = x=> B - 30*Math.sin((x-10)*0.13);                // slow
+    const p1=path(fnTop).replace('stroke-width="2.4"','stroke-width="2.2"');
+    const p2=path(fnBot).replace(TRACE,"#f0a58c");
+    return `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
+      <line x1="0" y1="${A}" x2="${W}" y2="${A}" stroke="${GRID}" stroke-width="1"/>
+      <line x1="0" y1="${B}" x2="${W}" y2="${B}" stroke="${GRID}" stroke-width="1"/>
+      ${p1}${p2}
+      <text x="8" y="${A-8}" fill="${TXT}" font-family="monospace" font-size="11">L (normal)</text>
+      <text x="8" y="${B-8}" fill="${TXT}" font-family="monospace" font-size="11">R (slow)</text>
+    </svg>`;
+  }
+  function traceAlt(){
+    // alternating higher-voltage bursts and lower-voltage runs
+    const fn=x=>{
+      const seg = Math.floor((x-10)/110)%2;
+      const amp = seg===0? 34 : 12;
+      const freq = seg===0? 0.16 : 0.5;
+      return MIDY - amp*Math.sin((x-10)*freq);
+    };
+    return frame(path(fn,10,W-10,2.5), "alternating");
+  }
+  function spikeWave(){
+    const spikes=[130, 330, 530];
+    const fn=x=>{
+      let y=MIDY;
+      for(const s of spikes){
+        y -= 60*Math.exp(-((x-s)**2)/12);        // sharp spike (up)
+        y += 30*Math.exp(-((x-(s+34))**2)/900);  // following slow wave (down)
+      }
+      return y;
+    };
+    return frame(path(fn,10,W-10,2), "spike-and-wave");
+  }
+  return {rhythm, fastLoss, flat, burstSupp, asymmetry, traceAlt, spikeWave};
+})();
+
 const TOPICS = [
   {
     id:"ionm",
@@ -837,6 +926,145 @@ const TOPICS = [
     ]
   }
 
+  ,{
+    id:"caseeeg",
+    title:"Case EEG — Waveform Recognition",
+    sub:"Name the pattern or finding",
+    source:"Patterns drawn from NDT 204 IONM & EEG course material (ischemia progression, anesthesia stages, frequency bands, neonatal patterns). Illustrative waveforms are original.",
+    cards:[
+      ["Frequency","Name this rhythm and its state.", "This is <span class='hl'>alpha</span> (8–13 Hz) — awake, relaxed, eyes closed.", EEG.rhythm(10)],
+      ["Frequency","Name this rhythm and its state.", "This is <span class='hl'>beta</span> (13–30 Hz) — alert/active, fastest normal rhythm.", EEG.rhythm(22)],
+      ["Frequency","Name this rhythm and its state.", "This is <span class='hl'>theta</span> (4–8 Hz) — drowsiness / light sleep.", EEG.rhythm(6)],
+      ["Frequency","Name this rhythm and its state.", "This is <span class='hl'>delta</span> (0.5–4 Hz) — deep sleep, deep anesthesia, or severe ischemia.", EEG.rhythm(2.5)],
+      ["Ischemia","This EEG change appears just after a carotid cross-clamp. What is it?", "<span class='hl'>Loss of fast frequencies</span> — the earliest sign of ischemia (fast beta fades, slower activity emerges).", EEG.fastLoss()],
+      ["Ischemia","Name this ischemia stage from the waveform.", "<span class='hl'>Ischemia / delta predominance</span> — prominent slow, high-voltage delta from significant flow reduction.", EEG.rhythm(2.5)],
+      ["Ischemia","Name this end-stage finding.", "<span class='hl'>Isoelectric / flatline</span> — profound suppression from infarction (irreversible).", EEG.flat()],
+      ["Anesthesia","This deepening-anesthesia pattern alternates bursts with flat periods. Name it.", "<span class='hl'>Burst suppression</span> — bursts of activity separated by suppressed (flat) intervals; stage 4 / deep anesthesia or neuroprotection.", EEG.burstSupp()],
+      ["Localization","One side is normal, the other is slow. What does this asymmetry suggest?", "<span class='hl'>Focal / unilateral slowing</span> — suggests a one-sided problem (e.g., ischemia), unlike symmetric anesthesia effect.", EEG.asymmetry()],
+      ["Neonatal","Name this neonatal quiet-sleep pattern (bursts separated by low-voltage periods).", "<span class='hl'>Tracé discontinu</span> (very preterm) / <span class='hl'>tracé alternant</span> at term — the discontinuous quiet-sleep pattern.", EEG.traceAlt()],
+      ["Epileptiform","Name this epileptiform discharge.", "A <span class='hl'>spike-and-wave</span> discharge — a sharp spike followed by a slow wave.", EEG.spikeWave()]
+    ],
+    quiz:[
+      {svg:EEG.rhythm(10), q:"Which rhythm is shown, and what state does it indicate?",
+        opts:["Alpha (8–13 Hz) — awake, relaxed","Delta (0.5–4 Hz) — deep sleep","Beta (13–30 Hz) — alert","Theta (4–8 Hz) — drowsy"],a:0,
+        ex:"Moderate frequency, regular — <b>alpha</b>, the awake-relaxed rhythm."},
+      {svg:EEG.rhythm(2.5), q:"Identify this rhythm.",
+        opts:["Delta (0.5–4 Hz)","Alpha (8–13 Hz)","Beta (13–30 Hz)","Theta (4–8 Hz)"],a:0,
+        ex:"Slow, high-amplitude waves = <b>delta</b> — deep sleep, deep anesthesia, or severe ischemia."},
+      {svg:EEG.rhythm(22), q:"Identify this rhythm.",
+        opts:["Beta (13–30 Hz) — alert/active","Delta — deep sleep","Theta — drowsy","Alpha — relaxed"],a:0,
+        ex:"Fast, low-amplitude activity = <b>beta</b>."},
+      {svg:EEG.fastLoss(), q:"Right after carotid cross-clamping the trace changes like this. What is happening?",
+        opts:["Loss of fast frequencies — earliest ischemia sign","Normal alpha rhythm","Burst suppression","Spike-and-wave seizure"],a:0,
+        ex:"Fast (beta) activity fades first as perfusion drops — the <b>earliest ischemia sign</b>."},
+      {svg:EEG.flat(), q:"What does this end-stage tracing represent?",
+        opts:["Isoelectric / flatline (infarction)","Deep sleep delta","Muscle artifact","Alpha coma"],a:0,
+        ex:"A flat, <b>isoelectric</b> record — profound suppression from infarction (irreversible)."},
+      {svg:EEG.burstSupp(), q:"Bursts of activity alternate with flat periods. Name the pattern.",
+        opts:["Burst suppression","Tracé alternant","Spike-and-wave","Normal beta"],a:0,
+        ex:"<b>Burst suppression</b> — deep anesthesia / neuroprotection (or severe injury)."},
+      {svg:EEG.asymmetry(), q:"The two channels differ — one normal, one slow. This asymmetry suggests…",
+        opts:["Focal/unilateral slowing (possible ischemia)","A global anesthesia effect","Normal symmetric EEG","A calibration error only"],a:0,
+        ex:"<b>Focal, one-sided</b> slowing points to a local problem (e.g., ischemia); anesthesia effects are global/symmetric."},
+      {svg:EEG.spikeWave(), q:"Identify this epileptiform discharge.",
+        opts:["Spike-and-wave","Delta rhythm","Sleep spindle","Burst suppression"],a:0,
+        ex:"A sharp <b>spike</b> immediately followed by a slow <b>wave</b> = spike-and-wave."},
+      {svg:EEG.traceAlt(), q:"A term neonate in quiet sleep shows this. Name it.",
+        opts:["Tracé alternant","Alpha rhythm","Burst suppression from anesthesia","Isoelectric line"],a:0,
+        ex:"<b>Tracé alternant</b> — the alternating discontinuous quiet-sleep pattern at term (tracé discontinu earlier in preterms)."},
+      {svg:EEG.rhythm(6), q:"Identify this rhythm.",
+        opts:["Theta (4–8 Hz) — drowsy/light sleep","Beta — alert","Alpha — relaxed","Delta — deep sleep"],a:0,
+        ex:"Between alpha and delta in speed = <b>theta</b> (drowsiness / light sleep)."}
+    ],
+    cheat:[
+      {h:"Frequency bands (fast → slow)", headers:["Band","Look / state"], rows:[
+        ["Beta 13–30 Hz","Fast, low amplitude — alert"],
+        ["Alpha 8–13 Hz","Moderate, regular — relaxed"],
+        ["Theta 4–8 Hz","Slower — drowsy"],
+        ["Delta 0.5–4 Hz","Slow, high amplitude — deep sleep/ischemia"]]},
+      {h:"Injury patterns", headers:["Pattern","Meaning"], rows:[
+        ["Loss of fast activity","Earliest ischemia sign"],
+        ["Delta predominance","Established ischemia"],
+        ["Isoelectric / flat","Infarction (irreversible)"],
+        ["Burst suppression","Deep anesthesia / neuroprotection"],
+        ["Focal/unilateral slowing","Local problem (vs symmetric = anesthesia)"]]},
+      {h:"Recognition tips", hook:"Symmetric + drug-timed = <span class='hl'>anesthesia</span>. Focal/asymmetric + event-timed = <span class='hl'>real injury</span>. Neonatal quiet sleep = <span class='hl'>tracé discontinu/alternant</span>. Spike-then-slow-wave = <span class='hl'>epileptiform</span>."}
+    ]
+  }
+
+  ,{
+    id:"examreview",
+    title:"IONM Exam Review (Actual Questions)",
+    sub:"Built from the real IONM exam answer key",
+    source:"Actual IONM exam questions & answers provided by the student.",
+    cards:[
+      ["Pathways","What tract is evaluated when performing SSEP?","The <span class='hl'>ascending tract</span> — SSEPs monitor the ascending sensory pathway."],
+      ["Pathways","The somatosensory pathway is also known as?","The <span class='hl'>spinothalamic tract</span>."],
+      ["Pathways","Where does the FIRST synapse of the somatosensory pathway occur?","At the <span class='hl'>spinal cord</span>."],
+      ["Pathways","How many synapses does the MOTOR pathway have?","<span class='hl'>Two</span> — upper motor neuron → lower motor neuron, then lower motor neuron → neuromuscular junction."],
+      ["Pathways","BAEPs evaluate the integrity of what?","The <span class='hl'>brainstem</span>."],
+      ["Pathways","What are synapses?","The <span class='hl'>junctional complexes between neurons</span> — where the presynaptic and postsynaptic membranes meet."],
+      ["Sterile","Gold standard to minimize spread of infectious disease?","<span class='hl'>Wash your hands with soap</span> (soap & water is the gold standard; sanitizer only supplements)."],
+      ["Sterile","Who is the center of the sterile field?","The <span class='hl'>patient</span>."],
+      ["Sterile","Tables covered with blue drapes are sterile at what level?","<span class='hl'>Table level only</span>."],
+      ["Sterile","Minimum distance an unsterile person should keep from the sterile field?","<span class='hl'>12 inches</span>."],
+      ["Sterile","Definition of asepsis?","The <span class='hl'>absence of infectious organisms</span>."],
+      ["Sterile","What should an IONM technologist do when entering the OR?","<span class='hl'>Change into scrubs</span> and enter using <span class='hl'>hat, mask, and shoe covers</span>."],
+      ["Anesthesia","Most commonly used benzodiazepine?","<span class='hl'>Versed</span> (midazolam)."],
+      ["Anesthesia","Goals of anesthesia?","<span class='hl'>All of the above</span> — unconsciousness, analgesia, amnesia, and akinesia (lack of movement)."],
+      ["Role","The technologist's role in the OR is best described by?","<span class='hl'>All of the above</span> — setup/electrodes, monitoring, communication, troubleshooting, and documentation."]
+    ],
+    quiz:[
+      {q:"What tract is evaluated when performing SSEP?",opts:["Ascending tract","Descending tract","Peripheral tract","Auditory tract"],a:0,
+        ex:"SSEPs monitor the <b>ascending sensory pathway</b>."},
+      {q:"The somatosensory pathway is also known as the…",opts:["Spinothalamic tract","Corticospinal tract","Spinocerebellar tract","Reticulospinal tract"],a:0,
+        ex:"The <b>spinothalamic tract</b>."},
+      {q:"The first synapse of the somatosensory pathway occurs at the…",opts:["Spinal cord","Thalamus","Cortex","Brainstem"],a:0,
+        ex:"The first synapse is at the <b>spinal cord</b>."},
+      {q:"How many synapses does the motor pathway have?",opts:["2","1","3","4"],a:0,
+        ex:"<b>Two</b>: upper→lower motor neuron, then lower motor neuron→NMJ."},
+      {q:"BAEPs are used to evaluate the integrity of the…",opts:["Brainstem","Cerebral cortex","Spinal cord","Peripheral nerve"],a:0,
+        ex:"BAEPs assess the <b>brainstem</b> (auditory pathway)."},
+      {q:"What are synapses?",opts:["Junctional complexes between the pre- and postsynaptic membranes","The axon's myelin sheath","The muscle fiber itself","The recording electrode contact"],a:0,
+        ex:"Synapses are the <b>junctional complexes</b> between neurons, where pre- and postsynaptic membranes meet."},
+      {q:"The gold standard to minimize spread of infectious disease is…",opts:["Washing hands with soap and water","Alcohol hand sanitizer","Wearing two pairs of gloves","Changing scrubs hourly"],a:0,
+        ex:"<b>Soap and water</b> is the gold standard; sanitizer only supplements it."},
+      {q:"Who is the center of the sterile field?",opts:["The patient","The surgeon","The IONM technologist","The anesthesiologist"],a:0,
+        ex:"The <b>patient</b> is the center of the sterile field."},
+      {q:"Tables covered with blue drapes are sterile at…",opts:["Table level only","The entire table including sides","Only the center","Everywhere above the floor"],a:0,
+        ex:"Only at <b>table level</b> — anything below the tabletop is considered unsterile."},
+      {q:"The minimum distance an unsterile person should keep from the sterile field is…",opts:["12 inches","6 inches","3 feet","1 inch"],a:0,
+        ex:"<b>12 inches.</b>"},
+      {q:"Asepsis is defined as…",opts:["The absence of infectious organisms","The killing of all bacteria only","Wearing sterile gloves","A sterilized instrument tray"],a:0,
+        ex:"Asepsis = the <b>absence of infectious organisms</b>."},
+      {q:"When entering the OR, an IONM technologist should…",opts:["Change into scrubs and wear hat, mask, and shoe covers","Enter in street clothes with a mask","Wear only gloves","Wait outside until the case ends"],a:0,
+        ex:"<b>Change into scrubs</b> and use hat, mask, and shoe covers."},
+      {q:"The most commonly used benzodiazepine is…",opts:["Versed (midazolam)","Propofol","Ketamine","Fentanyl"],a:0,
+        ex:"<b>Versed (midazolam).</b>"},
+      {q:"The goals of anesthesia include…",opts:["All of the above","Only unconsciousness","Only pain control","Only muscle relaxation"],a:0,
+        ex:"<b>All of the above</b> — unconsciousness, analgesia, amnesia, akinesia."},
+      {q:"The technologist's role in the OR is best described by…",opts:["All of the above","Only running the equipment","Only documentation","Only communicating with the surgeon"],a:0,
+        ex:"<b>All of the above</b> — setup, monitoring, communication, troubleshooting, documentation."}
+    ],
+    cheat:[
+      {h:"Pathways", headers:["Question","Answer"], rows:[
+        ["SSEP evaluates","Ascending (sensory) tract"],
+        ["Somatosensory pathway =","Spinothalamic tract"],
+        ["First somatosensory synapse","Spinal cord"],
+        ["Motor pathway synapses","2 (UMN→LMN, LMN→NMJ)"],
+        ["BAEP evaluates","Brainstem"],
+        ["Synapse =","Junction between pre- & postsynaptic membranes"]]},
+      {h:"Sterile technique", headers:["Question","Answer"], rows:[
+        ["Gold standard vs infection","Soap & water hand washing"],
+        ["Center of sterile field","The patient"],
+        ["Blue-draped tables sterile at","Table level only"],
+        ["Unsterile person distance","12 inches"],
+        ["Asepsis =","Absence of infectious organisms"],
+        ["Tech entering OR","Scrubs + hat, mask, shoe covers"]]},
+      {h:"Anesthesia & role", hook:"Most common benzo = <span class='hl'>Versed (midazolam)</span>. Goals of anesthesia = <span class='hl'>all of the above</span> (unconsciousness, analgesia, amnesia, akinesia). Tech role = <span class='hl'>all of the above</span>."}
+    ]
+  }
+
 ];
 
 /* ===================== STATE ===================== */
@@ -896,7 +1124,7 @@ function paintFlash(){
   const c=cur.cards[fc.i];
   const card=$('fcard');card.classList.remove('flip');fc.flip=false;
   $('fcTag').textContent=c[0].toUpperCase();
-  $('fcQ').innerHTML=c[1];$('fcA').innerHTML=c[2];
+  $('fcQ').innerHTML=(c[3]?`<div class="eegbox">${c[3]}</div>`:'')+c[1];$('fcA').innerHTML=c[2];
   $('fcCount').textContent=`${pad(fc.i+1)} / ${pad(cur.cards.length)}`;
   $('fcPrev').disabled=fc.i===0;$('fcNext').disabled=fc.i===cur.cards.length-1;
   progress[cur.id].seen.add(fc.i);
@@ -919,6 +1147,7 @@ function paintQuiz(){
   $('qzAcc').textContent=qz.i?Math.round(qz.correct/qz.i*100)+'%':'—';
   $('qzStage').innerHTML=`
     ${item.scen?`<div class="scenario">▸ ${item.scen}</div>`:''}
+    ${item.svg?`<div class="eegbox">${item.svg}</div>`:''}
     <div class="qtext">${item.q}</div>
     <div id="qzOpts"></div>
     <div class="exp" id="qzExp"><b>Why:</b> ${item.ex}</div>
