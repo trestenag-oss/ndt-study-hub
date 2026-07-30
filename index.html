@@ -29,6 +29,26 @@
     --panel:#0f2136;
     --back:#12324a;
   }
+  [data-theme="dark"]{
+    --ink:#e9eef3;
+    --paper:#0c1622;
+    --card:#132433;
+    --trace:#ff6a42;
+    --trace-dim:#ff8a66;
+    --signal:#3fb99b;
+    --signal-bg:#123029;
+    --err:#e06b74;
+    --err-bg:#3a1e21;
+    --line:#2a3a4a;
+    --muted:#9fb0c0;
+    --panel:#0a1420;
+    --back:#0f2a3f;
+  }
+  [data-theme="dark"] .topic:hover,[data-theme="dark"] .mode:hover,[data-theme="dark"] .opt:hover:not(:disabled){background:#18293a}
+  [data-theme="dark"] .cs tr:nth-child(even) td{background:#0f1e2b}
+  [data-theme="dark"] .exp{background:#0f1e2b}
+  [data-theme="dark"] .searchbox,[data-theme="dark"] select{background:#132433;color:var(--ink)}
+  [data-theme="dark"] .front{box-shadow:0 2px 12px rgba(0,0,0,.4)}
   *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
   html,body{height:100%}
   body{
@@ -183,6 +203,36 @@
   .tab .lb{font-size:10px;font-family:"Courier New",monospace;letter-spacing:.08em;text-transform:uppercase}
   .tab.active{color:var(--trace)}
 
+  .themebtn{position:absolute;top:16px;right:16px;background:none;border:1.5px solid var(--line);
+    color:var(--muted);border-radius:99px;width:38px;height:38px;font-size:17px;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;z-index:25}
+  .themebtn:active{transform:scale(.94)}
+  @keyframes tappulse{0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}
+  .fcard.hint{animation:tappulse 1.1s ease 1}
+  .tiphint{font-family:"Courier New",monospace;font-size:11px;letter-spacing:.1em;color:var(--trace-dim);
+    text-align:center;margin-top:2px}
+  .histbar{display:flex;align-items:flex-end;gap:4px;height:44px;margin:6px 0 2px}
+  .histbar .hb{flex:1;background:var(--signal);border-radius:3px 3px 0 0;min-height:3px;opacity:.85}
+  .histrow{font-family:"Courier New",monospace;font-size:11px;color:var(--muted);display:flex;justify-content:space-between}
+  .placecard{background:var(--panel);color:#cfe6df;border-radius:12px;padding:16px;margin-bottom:14px}
+  .placecard h4{font-size:15px;margin-bottom:6px;color:#fff}
+  .placecard p{font-size:13px;color:#9fc4b8;margin-bottom:10px}
+  .searchbox{width:100%;padding:12px 14px;border:1.5px solid var(--line);border-radius:10px;
+    font-size:15px;font-family:inherit;background:#fff;color:var(--ink);margin-bottom:12px}
+  .searchbox:focus{outline:none;border-color:var(--trace)}
+  .mixedbtn{width:100%;background:var(--panel);color:#fff;border:none;border-radius:12px;
+    padding:14px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;margin-bottom:18px}
+  .mixedbtn:active{transform:scale(.99)}
+  .resetbtn{width:100%;background:none;border:1.5px solid var(--err);color:var(--err);border-radius:10px;
+    padding:11px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;margin-top:16px}
+  .sresult{background:#fff;border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:8px;cursor:pointer}
+  .sresult:hover{border-color:var(--trace)}
+  .sresult .st{font-family:"Courier New",monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--trace-dim);font-weight:700}
+  .sresult .sq{font-size:14px;font-weight:600;margin-top:3px}
+  .sresult .sa{font-size:13px;color:var(--muted);margin-top:3px}
+  .toggle{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);
+    font-family:"Courier New",monospace;margin-bottom:12px;cursor:pointer;user-select:none}
+  .toggle input{width:16px;height:16px;accent-color:var(--trace)}
   .srcnote{margin-top:26px;font-size:10.5px;color:var(--muted);font-family:"Courier New",monospace;line-height:1.7}
   .addnote{margin-top:14px;font-size:12px;color:var(--muted);background:#fff;border:1px dashed var(--line);
     border-radius:9px;padding:11px 13px}
@@ -191,6 +241,7 @@
 <body>
 
 <div class="topbar">
+  <button class="themebtn" id="themeBtn" title="Toggle dark mode" aria-label="Toggle dark mode">🌙</button>
   <div class="eyebrow" id="crumb">NDT Study Hub</div>
   <h1 id="topttl">NDT Study Hub</h1>
   <div class="who">Neurodiagnostic tech · exam prep</div>
@@ -203,6 +254,10 @@
     <div class="stat"><div class="n" id="stQuiz">—</div><div class="l">Best quiz</div></div>
     <div class="stat"><div class="n" id="stTopics">0/0</div><div class="l">Topics started</div></div>
   </div>
+  <input id="searchBox" class="searchbox" type="search" placeholder="Search all cards & questions…" autocomplete="off">
+  <div id="searchResults" class="hidden"></div>
+  <button class="mixedbtn" id="mixedBtn">⚡ Quiz me on everything (mixed)</button>
+  <button class="mixedbtn" id="placeBtn" style="background:var(--trace)">◎ Find my weak spots (placement)</button>
   <div class="sectlabel">Topics</div>
   <div id="topicList"></div>
   <div class="addnote">More material can be added over time — each topic holds its own flashcards, quiz, and cheat sheet.</div>
@@ -219,6 +274,7 @@
     <button class="mode" onclick="startQuiz()"><div class="ic">✎</div><div class="t">Practice quiz</div><div class="d" id="tmQzCount"></div></button>
     <button class="mode wide" onclick="startCheat()"><div class="ic">⚡</div><div class="t">Cheat sheet</div><div class="d">Quick reference — the things people mix up</div></button>
   </div>
+  <div id="tmHist"></div>
   <div class="srcnote" id="tmSrc"></div>
 </div>
 
@@ -237,6 +293,7 @@
     <span class="counter" id="fcCount">01 / 01</span>
     <div class="btns"><button class="mv ghost" id="fcPrev">Prev</button><button class="mv" id="fcNext">Next</button></div>
   </div>
+  <div class="tiphint" id="fcTip" style="display:none">Tap the card to flip</div>
   <div class="dots" id="fcDots"></div>
 </div>
 
@@ -266,8 +323,10 @@
 <div class="screen hidden" id="progress">
   <h2 class="screenttl">Your progress</h2>
   <div class="screensub" id="prgNote"></div>
+  <button class="mixedbtn" id="weakBtn">✕ Review my missed questions</button>
   <div id="prgList"></div>
-  <div class="addnote">Progress tracks while the app is open. To keep it permanently, save this file to your phone and open it from there.</div>
+  <div class="addnote" id="prgSaveNote"></div>
+  <button class="resetbtn" id="resetBtn">Reset all progress on this device</button>
 </div>
 
 <script>
@@ -390,14 +449,14 @@ const TOPICS = [
       ["Modalities","What does EMG evaluate?","<span class='hl'>Peripheral nerve</span> activity."]
     ],
     quiz:[
-      {q:"What is IONM primarily used for?",opts:["Preventing permanent neurological damage by detecting changes early","Recording data for billing","Replacing the anesthesiologist","Measuring blood pressure only"],a:0,ex:"IONM = real-time nervous-system watch to <b>catch injury early enough to fix it</b>."},
-      {q:"Who recorded the first human EEG?",opts:["Hans Berger","Wilder Penfield","Hans Selye","Santiago Ramón y Cajal"],a:0,ex:"<b>Hans Berger</b>, early 20th century."},
-      {q:"EEG signals mainly come from which cells?",opts:["Pyramidal neurons","Purkinje cells","Schwann cells","Astrocytes"],a:0,ex:"Synchronized <b>pyramidal neurons</b> in the cortex."},
-      {q:"Which two EEG features are most important intraoperatively?",opts:["Frequency and symmetry","Amplitude and color","Impedance and voltage","Latency and montage"],a:0,ex:"<b>Frequency and symmetry</b> — amplitude alone is less reliable."},
-      {q:"Order the perfusion states best → worst.",opts:["Normal → Oligemia → Ischemia → Infarction","Normal → Ischemia → Oligemia → Infarction","Oligemia → Normal → Infarction → Ischemia","Infarction → Ischemia → Oligemia → Normal"],a:0,ex:"A gradual dimmer switch: <b>Normal → Oligemia → Ischemia → Infarction</b>."},
-      {q:"What is the FIRST EEG sign of cerebral ischemia?",opts:["Loss of fast (beta) frequencies","Immediate flatline","Increased amplitude","No change ever"],a:0,ex:"Fast activity is metabolically expensive, so it <b>fades first</b>."},
-      {q:"SSEP evaluates which pathway?",opts:["Ascending sensory","Descending motor","Auditory brainstem","Peripheral nerve only"],a:0,ex:"SSEP = <b>ascending sensory</b> (signal travels up to the brain)."},
-      {q:"Anesthesia-related EEG slowing tends to be…",opts:["Global and symmetric","Focal and one-sided","Random and untimed","Only in the occiput"],a:0,ex:"Anesthesia = <b>global/symmetric</b>; ischemia = focal/asymmetric."}
+      {q:`IONM is crucial for:`, opts:[`Patient safety during surgery`,`Billing documentation`,`Replacing the surgeon`,`Warming the patient`], a:0, ex:`IONM protects the patient by detecting nervous-system changes early.`},
+      {q:`The first human EEG was recorded by:`, opts:[`Hans Berger`,`Wilder Penfield`,`Santiago Ramón y Cajal`,`Hans Selye`], a:0, ex:`<b>Hans Berger</b>, early 20th century.`},
+      {q:`EEG signals originate primarily from:`, opts:[`Pyramidal neurons`,`Purkinje cells`,`Schwann cells`,`Astrocytes`], a:0, ex:`Synchronized <b>pyramidal neurons</b> of the cortex.`},
+      {q:`The most important EEG characteristics during intraoperative monitoring are:`, opts:[`Frequency and symmetry`,`Amplitude and color`,`Impedance and montage`,`Latency and gain`], a:0, ex:`<b>Frequency and symmetry</b> — amplitude alone is less reliable.`},
+      {q:`The correct order of cerebral perfusion from best to worst is:`, opts:[`Normal, oligemia, ischemia, infarction`,`Normal, ischemia, oligemia, infarction`,`Oligemia, normal, infarction, ischemia`,`Infarction, ischemia, oligemia, normal`], a:0, ex:`Normal → oligemia → ischemia → infarction.`},
+      {q:`The first EEG sign of cerebral ischemia is:`, opts:[`Loss of fast (beta) frequencies`,`Immediate flatline`,`Increased amplitude`,`No change`], a:0, ex:`Fast activity fades first.`},
+      {q:`SSEP evaluates the:`, opts:[`Ascending sensory pathway`,`Descending motor pathway`,`Auditory brainstem pathway`,`Peripheral motor pathway`], a:0, ex:`SSEP = ascending sensory.`},
+      {q:`Anesthesia-related EEG slowing is typically:`, opts:[`Global and symmetric`,`Focal and one-sided`,`Random and untimed`,`Confined to the occiput`], a:0, ex:`Anesthesia = global/symmetric; ischemia = focal/asymmetric.`}
     ],
     cheat:[
       {h:"Ischemia progression", headers:["State","EEG"], rows:[
@@ -440,13 +499,13 @@ const TOPICS = [
       ["Order","Most → least anesthesia-sensitive?","<span class='hl'>TcMEP → cortical SSEP → BAEP</span>."]
     ],
     quiz:[
-      {q:"Which agents most strongly suppress TcMEPs?",opts:["Volatile/inhalational agents","Opioids","Ketamine","Etomidate"],a:0,ex:"<b>Gas agents</b> suppress motor signals heavily — hence TIVA."},
-      {q:"Approx MAC of nitrous oxide?",opts:["~105%","~1.2%","~2.0%","~50%"],a:0,ex:"N₂O ≈ <b>105%</b>."},
-      {q:"Why is propofol preferred for TcMEP cases?",opts:["It suppresses signals far less than gas","It paralyzes muscle","It boosts blood pressure","It has no CNS effect"],a:0,ex:"Propofol allows a reliable MEP; gas would flatten it."},
-      {q:"Which two IV agents can INCREASE evoked-potential amplitude?",opts:["Etomidate and ketamine","Fentanyl and propofol","Sevoflurane and N₂O","Rocuronium and succinylcholine"],a:0,ex:"<b>Etomidate & ketamine</b> — the signal-friendly exceptions."},
-      {q:"TOF fade is characteristic of…",opts:["Non-depolarizing blockers","Depolarizing blockers","Opioids","Volatile agents"],a:0,ex:"Non-depolarizing (rocuronium) = <b>fade</b>; succinylcholine = no fade."},
-      {q:"Is the D-wave sensitive or resistant to anesthesia?",opts:["Resistant","Sensitive","Blocked entirely","Only affected by opioids"],a:0,ex:"“D is Durable” — <b>resistant</b>; the I-wave is sensitive."},
-      {q:"Most anesthesia-sensitive evoked potential?",opts:["TcMEP","BAEP","Subcortical SSEP","Peripheral SSEP"],a:0,ex:"<b>TcMEP</b> is the most sensitive; BAEP the most resistant."}
+      {q:`The agents that most strongly suppress TcMEPs are:`, opts:[`Volatile/inhalational agents`,`Opioids`,`Ketamine`,`Etomidate`], a:0, ex:`Gas agents heavily suppress motor signals — hence TIVA.`},
+      {q:`The approximate MAC of nitrous oxide is:`, opts:[`~105%`,`~1.2%`,`~2.0%`,`~50%`], a:0, ex:`N₂O ≈ 105%.`},
+      {q:`The preferred anesthetic for reliable TcMEP monitoring is:`, opts:[`Propofol (TIVA)`,`Sevoflurane`,`Isoflurane`,`Nitrous oxide`], a:0, ex:`Propofol suppresses signals far less than gas.`},
+      {q:`The two IV agents that can INCREASE evoked-potential amplitude are:`, opts:[`Etomidate and ketamine`,`Fentanyl and propofol`,`Sevoflurane and N₂O`,`Rocuronium and succinylcholine`], a:0, ex:`Etomidate & ketamine are the signal-friendly exceptions.`},
+      {q:`Train-of-Four fade is characteristic of:`, opts:[`Non-depolarizing blockers`,`Depolarizing blockers`,`Opioids`,`Volatile agents`], a:0, ex:`Non-depolarizing (rocuronium) = fade; succinylcholine = no fade.`},
+      {q:`Regarding anesthesia sensitivity, the D-wave is:`, opts:[`Resistant to anesthesia`,`Sensitive to anesthesia`,`Always blocked`,`Affected only by opioids`], a:0, ex:`“D is Durable” — resistant; the I-wave is sensitive.`},
+      {q:`The most anesthesia-sensitive evoked potential is:`, opts:[`TcMEP`,`BAEP`,`Subcortical SSEP`,`Peripheral SSEP`], a:0, ex:`TcMEP most sensitive; BAEP most resistant.`}
     ],
     cheat:[
       {h:"MAC values", headers:["Agent","MAC"], rows:[["Nitrous oxide","~105%"],["Isoflurane","~1.2%"],["Sevoflurane","~2.0%"]]},
@@ -484,14 +543,14 @@ const TOPICS = [
       ["Clinical","Detect early CTS — which comparison & cutoff?","<span class='hl'>Median vs ulnar palmar</span> peak latency; normal < <span class='hl'>0.4 ms</span>."]
     ],
     quiz:[
-      {scen:"Setting up a median motor study.",q:"Where does the active recording electrode go?",opts:["Belly of the APB","Belly of the ADM","Anatomical snuff box","Over the brachial pulse"],a:0,ex:"Median motor → <b>APB</b>. ADM is ulnar; snuff box is radial."},
-      {scen:"Median motor, wrist stimulation.",q:"Distance & landmarks for the wrist site?",opts:["8 cm, between FCR and palmaris longus","14 cm, next to FCU","3–4 cm on a tendon","10 cm between biceps & triceps"],a:0,ex:"Median wrist site = <b>8 cm</b>, between FCR & PL."},
-      {scen:"Ulnar motor study.",q:"Active recording electrode over which muscle?",opts:["ADM","APB","First dorsal interosseous","FCU"],a:0,ex:"Ulnar motor → <b>ADM</b> (hypothenar)."},
-      {scen:"Ulnar motor, multi-site.",q:"Correct stimulation sequence?",opts:["Wrist → below elbow → above elbow","Wrist → antecubital → axilla","Snuff box → forearm → elbow","Palm → wrist → elbow"],a:0,ex:"<b>Wrist (8cm) → below elbow → above elbow (10cm)</b> brackets the elbow."},
-      {scen:"Direction of recording.",q:"Which is ORTHODROMIC for median sensory?",opts:["Stim index finger, record at wrist","Stim wrist, record at digit","Both at wrist","Stim elbow, record snuff box"],a:0,ex:"Ortho = normal direction: <b>stim distal, record proximal</b>."},
-      {scen:"Radial study.",q:"Superficial radial sensory active electrode?",opts:["Anatomical snuff box","APB belly","5th finger","Wrist crease"],a:0,ex:"Records at the <b>snuff box</b>."},
-      {scen:"Polarity check.",q:"Standard cathode/anode arrangement?",opts:["Cathode distal, anode proximal","Cathode proximal, anode distal","Both same point","Cathode on bone"],a:0,ex:"<b>Cathode distal, anode proximal</b> (except F/H waves)."},
-      {scen:"Early CTS workup.",q:"Which comparison + normal cutoff?",opts:["Median vs ulnar palmar, <0.4 ms","Median vs radial, <4 ms","Ulnar motor vs F-wave, <1 ms","Ortho vs antidromic, =8 ms"],a:0,ex:"<b>Median vs ulnar palmar</b>; normal difference <b>< 0.4 ms</b>."}
+      {q:`The median motor active recording electrode is placed over the:`, opts:[`Belly of the APB`,`Belly of the ADM`,`Anatomical snuff box`,`Brachial pulse`], a:0, ex:`Median motor → APB.`},
+      {q:`The median motor wrist stimulation site is:`, opts:[`8 cm proximal, between FCR and palmaris longus`,`14 cm proximal, next to FCU`,`3–4 cm on a tendon`,`10 cm between biceps and triceps`], a:0, ex:`8 cm, between FCR & PL.`},
+      {q:`The ulnar motor active recording electrode is over the:`, opts:[`Abductor digiti minimi (ADM)`,`Abductor pollicis brevis (APB)`,`First dorsal interosseous`,`Flexor carpi ulnaris`], a:0, ex:`Ulnar motor → ADM.`},
+      {q:`The ulnar motor stimulation sequence is:`, opts:[`Wrist, below elbow, above elbow`,`Wrist, antecubital, axilla`,`Snuff box, forearm, elbow`,`Palm, wrist, elbow`], a:0, ex:`Wrist (8 cm) → below elbow → above elbow (10 cm).`},
+      {q:`The superficial radial sensory active electrode is placed at the:`, opts:[`Anatomical snuff box`,`APB belly`,`5th finger`,`Wrist crease`], a:0, ex:`Radial sensory records at the snuff box.`},
+      {q:`An orthodromic median sensory study means you:`, opts:[`Stimulate the index finger and record at the wrist`,`Stimulate the wrist and record at the digit`,`Record and stimulate at the wrist`,`Stimulate above the elbow`], a:0, ex:`Orthodromic = normal direction (stim distal, record proximal).`},
+      {q:`In a standard NCS, the cathode and anode are positioned:`, opts:[`Cathode distal, anode proximal`,`Cathode proximal, anode distal`,`Both at the same point`,`Cathode on bone`], a:0, ex:`Cathode distal, anode proximal (except F/H waves).`},
+      {q:`Early carpal tunnel syndrome is best detected by:`, opts:[`Comparing median vs. ulnar palmar peak latencies`,`Median vs. radial motor`,`Ulnar motor vs. F-wave`,`Ortho vs. antidromic radial`], a:0, ex:`Median vs. ulnar palmar; normal difference < 0.4 ms.`}
     ],
     cheat:[
       {h:"Recording targets", headers:["Study","Active electrode"], rows:[
@@ -525,13 +584,13 @@ const TOPICS = [
       ["Terminology","Motor vs sensory reference placement (LE)?","Motor: reference <span class='hl'>off the belly</span> on bone/tendon. Sensory: both electrodes <span class='hl'>on the same plane</span> over the nerve."]
     ],
     quiz:[
-      {scen:"Sural sensory study.",q:"Where is the active recording electrode?",opts:["Posterior to the lateral malleolus","Over the EDB belly","Popliteal fossa","Base of the great toe"],a:0,ex:"Sural records <b>posterior to the lateral malleolus</b>, between it and the Achilles tendon."},
-      {scen:"Sural sensory setup.",q:"Stimulation distance & cathode orientation?",opts:["12–14 cm proximal, cathode distal","8 cm proximal, cathode proximal","3 cm distal","10 cm below fibular head"],a:0,ex:"<b>12–14 cm proximal</b> on the posterolateral calf, cathode distal."},
-      {scen:"Peroneal motor to EDB.",q:"Active electrode location?",opts:["EDB belly, ~3 fingerbreadths from lateral malleolus","Anterior tibialis","Abductor hallucis","Base of 5th toe"],a:0,ex:"Active over the <b>EDB belly</b>; the base of the 5th toe is the reference."},
-      {scen:"Peroneal motor (EDB) three-site study.",q:"Which lists the correct sites?",opts:["Ankle (8cm) → below fibular head → popliteal fossa","Wrist → elbow → axilla","Medial malleolus → arch → knee","Snuff box → forearm → elbow"],a:0,ex:"<b>Ankle (8 cm) → below fibular head → popliteal fossa (10 cm above fibular head)</b>."},
-      {scen:"Posterior tibial motor study.",q:"Active recording electrode is over which muscle?",opts:["Abductor hallucis (AH)","EDB","Anterior tibialis","Soleus"],a:0,ex:"Posterior tibial motor records over the <b>abductor hallucis</b>."},
-      {scen:"Superficial peroneal sensory.",q:"Where is the active electrode placed?",opts:["Junction of the lateral third of a line between the malleoli","Snuff box","Posterior to lateral malleolus","Popliteal fossa"],a:0,ex:"At the <b>lateral third junction</b> of a line connecting the malleoli."},
-      {scen:"Identifying modalities.",q:"Which pair are the LE SENSORY studies?",opts:["Sural & superficial peroneal","Peroneal & tibial","Femoral & saphenous","EDB & AH"],a:0,ex:"<b>Sural</b> and <b>superficial peroneal sensory</b> are the routine LE sensory studies."}
+      {q:`The sural sensory active recording electrode is placed:`, opts:[`Posterior to the lateral malleolus`,`Over the EDB belly`,`In the popliteal fossa`,`At the base of the great toe`], a:0, ex:`Between the lateral malleolus and Achilles tendon.`},
+      {q:`The sural sensory stimulation site is:`, opts:[`12–14 cm proximal, cathode distal`,`8 cm proximal, cathode proximal`,`3 cm distal`,`10 cm below the fibular head`], a:0, ex:`12–14 cm proximal on the posterolateral calf.`},
+      {q:`The peroneal motor (EDB) active electrode is over the:`, opts:[`EDB belly`,`Anterior tibialis`,`Abductor hallucis`,`Base of the 5th toe`], a:0, ex:`EDB belly; base of 5th toe is the reference.`},
+      {q:`The peroneal motor (EDB) stimulation sites are:`, opts:[`Ankle, below fibular head, popliteal fossa`,`Wrist, elbow, axilla`,`Medial malleolus, arch, knee`,`Snuff box, forearm, elbow`], a:0, ex:`Ankle (8 cm) → below fibular head → popliteal fossa.`},
+      {q:`The posterior tibial motor active electrode is over the:`, opts:[`Abductor hallucis (AH)`,`EDB`,`Anterior tibialis`,`Soleus`], a:0, ex:`Posterior tibial → abductor hallucis.`},
+      {q:`The superficial peroneal sensory active electrode is placed at the:`, opts:[`Lateral-third junction of a line between the malleoli`,`Snuff box`,`Posterior to the lateral malleolus`,`Popliteal fossa`], a:0, ex:`Lateral-third junction of the malleolar line.`},
+      {q:`The lower-extremity SENSORY studies are:`, opts:[`Sural and superficial peroneal`,`Peroneal and tibial`,`Femoral and saphenous`,`EDB and AH`], a:0, ex:`Sural and superficial peroneal sensory.`}
     ],
     cheat:[
       {h:"Recording targets", headers:["Study","Active electrode"], rows:[
@@ -569,13 +628,13 @@ const TOPICS = [
       ["Sural","Sural nerve — roots & origin?","<span class='hl'>S1–S2</span>; formed from tibial & peroneal sensory branches; sensation to lower lateral leg & lateral foot."]
     ],
     quiz:[
-      {q:"How many pairs of spinal nerves are there?",opts:["31","24","28","33"],a:0,ex:"<b>31 pairs</b>: 8C, 12T, 5L, 5S, 1 coccygeal."},
-      {q:"Root levels of the femoral nerve?",opts:["L2–L4","L5–S2","L4–S3","S1–S2"],a:0,ex:"Femoral = <b>L2–L4</b>, innervates quadriceps."},
-      {q:"The sciatic nerve divides into which two nerves, and where?",opts:["Common peroneal & posterior tibial, at the popliteal fossa","Femoral & saphenous, at the inguinal ligament","Deep & superficial peroneal, at the ankle","Medial & lateral plantar, at the arch"],a:0,ex:"Sciatic (L5–S2) splits at the <b>popliteal fossa</b> into common peroneal + posterior tibial."},
-      {q:"Entrapment of which nerve causes meralgia paresthetica?",opts:["Lateral femoral cutaneous","Saphenous","Sural","Deep peroneal"],a:0,ex:"The <b>lateral femoral cutaneous nerve</b> (L2–L3) — not a femoral branch."},
-      {q:"The deep peroneal nerve innervates all EXCEPT:",opts:["Peroneus longus","Anterior tibialis","Extensor digitorum longus","Extensor hallucis longus"],a:0,ex:"Peroneus longus is <b>superficial</b> peroneal; deep peroneal does AT, EDL, EHL, EDB."},
-      {q:"Which nerve is the distal sensory branch of the femoral nerve?",opts:["Saphenous","Sural","Superficial peroneal","Lateral plantar"],a:0,ex:"The <b>saphenous nerve</b> (L3–L4)."},
-      {q:"The posterior tibial nerve bifurcates into…",opts:["Medial & lateral plantar nerves","Deep & superficial peroneal","Common peroneal & sural","Femoral & saphenous"],a:0,ex:"Into the <b>medial and lateral plantar</b> nerves."}
+      {q:`The total number of spinal nerve pairs is:`, opts:[`31`,`24`,`28`,`33`], a:0, ex:`31 pairs: 8C, 12T, 5L, 5S, 1 coccygeal.`},
+      {q:`The femoral nerve arises from roots:`, opts:[`L2–L4`,`L5–S2`,`L4–S3`,`S1–S2`], a:0, ex:`Femoral = L2–L4.`},
+      {q:`The sciatic nerve divides at the popliteal fossa into the:`, opts:[`Common peroneal and posterior tibial nerves`,`Femoral and saphenous nerves`,`Deep and superficial peroneal nerves`,`Medial and lateral plantar nerves`], a:0, ex:`Common peroneal + posterior tibial.`},
+      {q:`Meralgia paresthetica results from entrapment of the:`, opts:[`Lateral femoral cutaneous nerve`,`Saphenous nerve`,`Sural nerve`,`Deep peroneal nerve`], a:0, ex:`Lateral femoral cutaneous nerve (L2–L3).`},
+      {q:`The deep peroneal nerve innervates all of the following EXCEPT the:`, opts:[`Peroneus longus`,`Anterior tibialis`,`Extensor digitorum longus`,`Extensor hallucis longus`], a:0, ex:`Peroneus longus is superficial peroneal.`},
+      {q:`The distal sensory branch of the femoral nerve is the:`, opts:[`Saphenous nerve`,`Sural nerve`,`Superficial peroneal nerve`,`Lateral plantar nerve`], a:0, ex:`Saphenous nerve (L3–L4).`},
+      {q:`The posterior tibial nerve bifurcates into the:`, opts:[`Medial and lateral plantar nerves`,`Deep and superficial peroneal`,`Common peroneal and sural`,`Femoral and saphenous`], a:0, ex:`Medial and lateral plantar nerves.`}
     ],
     cheat:[
       {h:"Plexus root levels", headers:["Structure","Roots"], rows:[
@@ -620,18 +679,18 @@ const TOPICS = [
       ["Myopathy","Myopathy — key features?","Weakness from muscle fiber abnormality (<span class='hl'>nerves normal</span>); motor, bilateral & proximal>distal; <span class='hl'>EMG</span> more useful than NCS."]
     ],
     quiz:[
-      {q:"Which finding indicates an AXONAL neuropathy?",opts:["Reduced amplitude","Slowed conduction velocity","Prolonged latency","Conduction block"],a:0,ex:"Axonal loss → <b>reduced amplitude</b>. Demyelination → slowing/prolonged latency."},
-      {q:"Which finding indicates a DEMYELINATING neuropathy?",opts:["Slowed velocity & prolonged latency","Reduced amplitude only","Normal everything","Increased amplitude"],a:0,ex:"Demyelination → <b>slowed velocity, prolonged latency</b>."},
-      {q:"Neurapraxia is best described as…",opts:["Compression with no axonal disruption","A severed nerve","Axon crush with regeneration","Complete transection"],a:0,ex:"<b>Neurapraxia</b> = compression, axon intact. Axonotmesis = disrupted; neurotmesis = severed."},
-      {q:"GBS (AIDP) classically presents with…",opts:["Ascending weakness","Descending weakness","Pure sensory loss","Ocular fatigue"],a:0,ex:"<b>Ascending weakness</b>, often post-viral, with F-wave changes."},
-      {q:"Approximate normal UPPER extremity F-wave latency?",opts:["~32 ms","~56 ms","~10 ms","~90 ms"],a:0,ex:"UE ~<b>32 ms</b>; LE ~56 ms."},
-      {q:"Charcot-Marie-Tooth is characterized by…",opts:["Extremely slow, symmetrical conduction velocities","Reduced amplitude only","Normal studies","Pure NMJ decrement"],a:0,ex:"CMT (HMSN): <b>very slow velocities</b> (~10 LE / 20 UE m/s), symmetrical."},
-      {q:"ALS affects which structures?",opts:["Motor neurons only (anterior horn cells)","Sensory nerves only","The NMJ only","Muscle fibers only"],a:0,ex:"<b>Motor neurons only</b> — no sensory findings."},
-      {q:"S1 radiculopathy typically causes weakness of…",opts:["Gastrocnemius","Quadriceps","Biceps","Triceps"],a:0,ex:"S1 → <b>gastroc</b> weakness, sensory loss over lateral ankle/heel/sole."},
-      {q:"Lambert-Eaton (LEMS) on repetitive stim shows…",opts:["Amplitude INCREASE after exercise","Decrement that worsens with exercise","No change","Prolonged latency only"],a:0,ex:"LEMS is <b>presynaptic</b>: low amplitudes that increase 100–400% post-exercise."},
-      {q:"Myasthenia gravis on RNS shows…",opts:["A decremental response","An incremental response","Slowed velocity","Reduced sensory amplitude"],a:0,ex:"MG is <b>postsynaptic</b>: <b>decrement</b> on RNS, worsens with exercise."},
-      {q:"The H-reflex is the electrical equivalent of…",opts:["An ankle jerk","A knee jerk","A biceps reflex","The gag reflex"],a:0,ex:"H-reflex ≈ <b>ankle jerk</b>; recorded over the soleus (S1)."},
-      {q:"Compared to F-waves, H-reflexes use…",opts:["Submaximal stimulation with consistent latency","Supramaximal stimulation with variable latency","No stimulation","Anode proximal only"],a:0,ex:"H = <b>submaximal, consistent latency</b> (sensory+motor). F = supramaximal, variable, pure motor."}
+      {q:`An axonal neuropathy is indicated by:`, opts:[`Reduced amplitude`,`Slowed conduction velocity`,`Prolonged latency`,`Conduction block`], a:0, ex:`Axonal loss → reduced amplitude.`},
+      {q:`A demyelinating neuropathy is indicated by:`, opts:[`Slowed velocity and prolonged latency`,`Reduced amplitude only`,`Normal studies`,`Increased amplitude`], a:0, ex:`Demyelination → slowing / prolonged latency.`},
+      {q:`Neurapraxia is best described as:`, opts:[`Compression with no axonal disruption`,`A severed nerve`,`Axon crush with regeneration`,`Complete transection`], a:0, ex:`Neurapraxia = compression, axon intact.`},
+      {q:`GBS (AIDP) classically presents with:`, opts:[`Ascending weakness`,`Descending weakness`,`Pure sensory loss`,`Ocular fatigue`], a:0, ex:`Ascending weakness, often post-viral.`},
+      {q:`The approximate normal upper-extremity F-wave latency is:`, opts:[`~32 ms`,`~56 ms`,`~10 ms`,`~90 ms`], a:0, ex:`UE ~32 ms; LE ~56 ms.`},
+      {q:`Charcot-Marie-Tooth is characterized by:`, opts:[`Extremely slow, symmetrical conduction velocities`,`Reduced amplitude only`,`Normal studies`,`Pure NMJ decrement`], a:0, ex:`Very slow velocities (~10 LE / 20 UE m/s).`},
+      {q:`ALS affects the:`, opts:[`Motor neurons only (anterior horn cells)`,`Sensory nerves only`,`NMJ only`,`Muscle fibers only`], a:0, ex:`Motor neurons only — no sensory findings.`},
+      {q:`S1 radiculopathy typically causes weakness of the:`, opts:[`Gastrocnemius`,`Quadriceps`,`Biceps`,`Triceps`], a:0, ex:`S1 → gastroc weakness.`},
+      {q:`Lambert-Eaton (LEMS) on repetitive stimulation shows:`, opts:[`Amplitude increase after exercise`,`Decrement worsening with exercise`,`No change`,`Prolonged latency only`], a:0, ex:`Presynaptic: increment post-exercise.`},
+      {q:`Myasthenia gravis on repetitive nerve stimulation shows:`, opts:[`A decremental response`,`An incremental response`,`Slowed velocity`,`Reduced sensory amplitude`], a:0, ex:`Postsynaptic: decrement, worse with exercise.`},
+      {q:`The H-reflex is the electrical equivalent of the:`, opts:[`Ankle jerk`,`Knee jerk`,`Biceps reflex`,`Gag reflex`], a:0, ex:`H-reflex ≈ ankle jerk (soleus, S1).`},
+      {q:`Compared with F-waves, H-reflexes use:`, opts:[`Submaximal stimulation with consistent latency`,`Supramaximal stimulation with variable latency`,`No stimulation`,`Anode proximal only`], a:0, ex:`H = submaximal, consistent latency; F = supramaximal, variable.`}
     ],
     cheat:[
       {h:"Axonal vs demyelinating", headers:["Type","NCS finding"], rows:[
@@ -679,13 +738,13 @@ const TOPICS = [
       ["Hreflex","H-reflex stimulation polarity?","Reversed — <span class='hl'>cathode proximal</span>, submaximal, increased stimulus duration (1.0 ms), at the popliteal fossa."]
     ],
     quiz:[
-      {scen:"Suspected ulnar lesion at Guyon's canal.",q:"Which study should stay NORMAL, helping localize it?",opts:["Dorsal ulnar cutaneous","Ulnar motor–ADM","Median sensory","Radial motor"],a:0,ex:"The <b>dorsal ulnar cutaneous</b> branches off before the wrist, so it's spared in a Guyon's canal lesion."},
-      {scen:"Evaluating the deep motor branch of the ulnar nerve.",q:"Which study & recording muscle?",opts:["Ulnar motor–FDIO (first dorsal interosseous)","Ulnar motor–ADM","Radial motor–EIP","Axillary–deltoid"],a:0,ex:"The <b>FDIO</b> study evaluates the deep ulnar motor branch."},
-      {scen:"Radial motor study.",q:"Active recording electrode is over which muscle?",opts:["Extensor indicis proprius (EIP)","Abductor pollicis brevis","First dorsal interosseous","Deltoid"],a:0,ex:"Radial motor records over the <b>EIP</b>, ~4 fingerbreadths proximal to the ulnar styloid."},
-      {scen:"Axillary nerve study.",q:"Recording site and stimulation points?",opts:["Deltoid; axilla & Erb's point","Biceps; axilla & Erb's point","Trapezius; posterior to SCM","Rectus femoris; inguinal area"],a:0,ex:"Axillary records over the <b>deltoid</b>, stimulated at the axilla and Erb's point."},
-      {scen:"Spinal accessory nerve study.",q:"Recording site and stimulation point?",opts:["Upper trapezius; posterior to the SCM","Deltoid; axilla","Biceps; elbow","Soleus; popliteal fossa"],a:0,ex:"Records over the <b>upper trapezius</b>, stimulated posterior to the SCM; used for RNS."},
-      {scen:"Femoral motor study.",q:"Active recording electrode location?",opts:["Rectus femoris, halfway between inguinal crease and knee","Deltoid belly","Abductor hallucis","EIP in the forearm"],a:0,ex:"Femoral motor records over the <b>rectus femoris</b> (or another quad)."},
-      {scen:"Saphenous nerve study.",q:"Stimulation distance?",opts:["14 cm proximal, between tibia & medial gastroc","8 cm proximal at the ankle","3 cm distal to reference","10 cm below fibular head"],a:0,ex:"Saphenous stim is <b>14 cm proximal</b>, between tibia and medial gastrocnemius."}
+      {q:`The study that stays NORMAL in a Guyon's-canal ulnar lesion is the:`, opts:[`Dorsal ulnar cutaneous`,`Ulnar motor–ADM`,`Median sensory`,`Radial motor`], a:0, ex:`It branches off before the wrist, so it's spared.`},
+      {q:`The deep motor branch of the ulnar nerve is evaluated by the:`, opts:[`Ulnar motor–FDIO study`,`Ulnar motor–ADM study`,`Radial motor–EIP study`,`Axillary–deltoid study`], a:0, ex:`FDIO study.`},
+      {q:`The radial motor active recording electrode is over the:`, opts:[`Extensor indicis proprius (EIP)`,`Abductor pollicis brevis`,`First dorsal interosseous`,`Deltoid`], a:0, ex:`EIP, ~4 fingerbreadths proximal to the ulnar styloid.`},
+      {q:`The axillary nerve is recorded over the deltoid and stimulated at the:`, opts:[`Axilla and Erb's point`,`Wrist and elbow`,`Posterior to the SCM`,`Inguinal area`], a:0, ex:`Axilla and Erb's point.`},
+      {q:`The spinal accessory nerve is recorded over the:`, opts:[`Upper trapezius`,`Deltoid`,`Biceps`,`Soleus`], a:0, ex:`Upper trapezius; stimulate posterior to the SCM.`},
+      {q:`The femoral motor active recording electrode is over the:`, opts:[`Rectus femoris`,`Deltoid`,`Abductor hallucis`,`EIP`], a:0, ex:`Rectus femoris (or another quad).`},
+      {q:`The saphenous nerve stimulation site is:`, opts:[`14 cm proximal, between tibia and medial gastroc`,`8 cm proximal at the ankle`,`3 cm distal to the reference`,`10 cm below the fibular head`], a:0, ex:`14 cm proximal, between tibia and medial gastroc.`}
     ],
     cheat:[
       {h:"UE uncommon studies", headers:["Study","Active electrode"], rows:[
@@ -725,16 +784,16 @@ const TOPICS = [
       ["Timescale","When use SLOW paper speed (15 mm/s)?","Enhancing periodicity, polysomnography, neonatal EEG, groups of low-voltage slow-wave activity (FIRDA)."]
     ],
     quiz:[
-      {q:"Ohm's law: I × R = E means…",opts:["Current × Resistance = Voltage","Current × Voltage = Resistance","Impedance × Rate = Energy","Input × Reference = Error"],a:0,ex:"<b>Amps × Ohms = Volts.</b>"},
-      {q:"The Nyquist criterion requires a sample rate at least…",opts:["Twice the fastest frequency recorded","Half the fastest frequency","Equal to the frequency","Ten times the frequency"],a:0,ex:"At least <b>2×</b> the fastest frequency; ACNS uses 3× the HFF."},
-      {q:"ACNS minimum sampling rate relative to the high-frequency filter?",opts:["3× the HFF","1× the HFF","0.5× the HFF","10× the HFF"],a:0,ex:"<b>3× the HFF</b> (e.g., 100/s for a 35-Hz filter)."},
-      {q:"Aliasing occurs when…",opts:["Too few points are sampled on the wave","Too many channels are used","The gain is too low","The paper speed is 30 mm/s"],a:0,ex:"<b>Under-sampling</b> the waveform causes aliasing."},
-      {q:"Minimum common mode rejection ratio (CMRR)?",opts:["90 dB (10,000:1)","30 dB (100:1)","10 dB (10:1)","120 dB (1,000,000:1)"],a:0,ex:"At least <b>90 dB / 10,000:1</b>."},
-      {q:"A differential amplifier amplifies…",opts:["The difference between G1 and G2","Each input separately","Only the ground signal","The 60 Hz component"],a:0,ex:"It amplifies the <b>difference</b> between the two inputs."},
-      {q:"Recommended minimum amplitude (bit) resolution?",opts:["16 bits","8 bits","4 bits","2 bits"],a:0,ex:"<b>16 bits</b> or higher; fewer bits miss large changes."},
-      {q:"Standard time scale (paper speed)?",opts:["30 mm/second","10 mm/second","100 mm/second","5 mm/second"],a:0,ex:"<b>30 mm/s</b> is standard."},
-      {q:"Which situation calls for a FAST (60 mm/s) paper speed?",opts:["Distinguishing muscle from 60 Hz","Neonatal EEG","Polysomnography","Enhancing periodicity"],a:0,ex:"Fast speed helps with <b>muscle vs 60 Hz</b>, triphasic time lag, spike vs sharp duration, and secondary bilateral synchrony."},
-      {q:"Sampling skew is reduced by…",opts:["Burst-mode sampling","Lowering the gain","Increasing paper speed","Removing the ground"],a:0,ex:"<b>Burst-mode sampling</b> reduces the inter-channel time lag."}
+      {q:`Ohm's law (I × R = E) means:`, opts:[`Current × Resistance = Voltage`,`Current × Voltage = Resistance`,`Impedance × Rate = Energy`,`Input × Reference = Error`], a:0, ex:`Amps × Ohms = Volts.`},
+      {q:`The Nyquist criterion requires a sampling rate of at least:`, opts:[`Twice the fastest frequency recorded`,`Half the fastest frequency`,`Equal to the frequency`,`Ten times the frequency`], a:0, ex:`At least 2×; ACNS uses 3× the HFF.`},
+      {q:`The ACNS minimum sampling rate is:`, opts:[`3× the high-frequency filter`,`1× the HFF`,`0.5× the HFF`,`10× the HFF`], a:0, ex:`3× the HFF.`},
+      {q:`Aliasing occurs when:`, opts:[`Too few points are sampled on the wave`,`Too many channels are used`,`The gain is too low`,`Paper speed is 30 mm/s`], a:0, ex:`Under-sampling causes aliasing.`},
+      {q:`The minimum common mode rejection ratio (CMRR) is:`, opts:[`90 dB (10,000:1)`,`30 dB (100:1)`,`10 dB (10:1)`,`120 dB`], a:0, ex:`At least 90 dB / 10,000:1.`},
+      {q:`A differential amplifier amplifies:`, opts:[`The difference between two inputs`,`Each input separately`,`Only the ground`,`The 60 Hz signal`], a:0, ex:`The difference between inputs.`},
+      {q:`The recommended minimum amplitude (bit) resolution is:`, opts:[`16 bits`,`8 bits`,`4 bits`,`2 bits`], a:0, ex:`16 bits or higher.`},
+      {q:`The standard time scale (paper speed) is:`, opts:[`30 mm/second`,`10 mm/second`,`100 mm/second`,`5 mm/second`], a:0, ex:`30 mm/s.`},
+      {q:`A fast paper speed (60 mm/s) is useful for:`, opts:[`Distinguishing muscle from 60 Hz`,`Neonatal EEG`,`Polysomnography`,`Enhancing periodicity`], a:0, ex:`Fast speed helps separate muscle from 60 Hz.`},
+      {q:`Sampling skew is reduced by:`, opts:[`Burst-mode sampling`,`Lowering the gain`,`Increasing paper speed`,`Removing the ground`], a:0, ex:`Burst-mode sampling.`}
     ],
     cheat:[
       {h:"Core numbers", headers:["Spec","Value"], rows:[
@@ -773,14 +832,14 @@ const TOPICS = [
       ["CV","Why exclude the NMJ in motor CV?","Because you measure across a <span class='hl'>nerve segment (S2–S1)</span>, not including the recording electrode / neuromuscular junction delay."]
     ],
     quiz:[
-      {q:"Latency is measured in what unit?",opts:["Milliseconds (ms)","Microvolts (µV)","Meters/second","Millivolts"],a:0,ex:"Latency = time delay, in <b>ms</b>."},
-      {q:"For SENSORY responses, which latency is used?",opts:["Peak latency","Take-off latency","Terminal latency","Proximal latency"],a:0,ex:"Sensory uses <b>peak latency</b> (max SNAP); motor uses take-off/onset."},
-      {q:"For a CMAP, the take-off latency corresponds to…",opts:["The fastest-conducting fibers","The slowest fibers","The average fiber","The sensory fibers"],a:0,ex:"Onset = the <b>fastest-conducting</b> motor fibers."},
-      {q:"SNAP amplitude is measured in ___ and CMAP in ___.",opts:["µV; mV","mV; µV","ms; m/s","m/s; ms"],a:0,ex:"SNAP = <b>microvolts</b>, CMAP = <b>millivolts</b>."},
-      {q:"The conduction velocity formula is…",opts:["CV = D / T","CV = T / D","CV = D × T","CV = D + T"],a:0,ex:"<b>CV = Distance ÷ Time.</b>"},
-      {q:"Median sensory: distance 14.5 cm, onset latency 2.8 ms. CV in m/s?",opts:["~52 m/s","~5.2 m/s","~40 m/s","~148 m/s"],a:0,ex:"14.5 ÷ 2.8 = 5.2 cm/ms, ×10 = <b>52 m/s</b>."},
-      {q:"To convert cm/ms to m/s you…",opts:["Multiply by 10","Divide by 10","Multiply by 100","Do nothing"],a:0,ex:"1 cm/ms = 10 m/s, so <b>×10</b>."},
-      {q:"Motor CV is calculated using…",opts:["Distance between S2 & S1 ÷ (proximal − distal latency)","Distance ÷ distal latency only","Onset latency alone","Amplitude ÷ duration"],a:0,ex:"Motor CV uses <b>two stim sites</b> to exclude the NMJ."}
+      {q:`Latency is measured in:`, opts:[`Milliseconds (ms)`,`Microvolts (µV)`,`Meters/second`,`Millivolts`], a:0, ex:`Latency = time delay, in ms.`},
+      {q:`For sensory responses, the latency used is the:`, opts:[`Peak latency`,`Take-off latency`,`Terminal latency`,`Proximal latency`], a:0, ex:`Sensory uses peak latency.`},
+      {q:`For a CMAP, the take-off latency corresponds to the:`, opts:[`Fastest-conducting fibers`,`Slowest fibers`,`Average fiber`,`Sensory fibers`], a:0, ex:`Onset = fastest-conducting motor fibers.`},
+      {q:`SNAP amplitude is measured in ___ and CMAP in ___:`, opts:[`µV; mV`,`mV; µV`,`ms; m/s`,`m/s; ms`], a:0, ex:`SNAP = microvolts, CMAP = millivolts.`},
+      {q:`The conduction velocity formula is:`, opts:[`CV = D / T`,`CV = T / D`,`CV = D × T`,`CV = D + T`], a:0, ex:`CV = Distance ÷ Time.`},
+      {q:`Median sensory: distance 14.5 cm, onset latency 2.8 ms. The CV is:`, opts:[`~52 m/s`,`~5.2 m/s`,`~40 m/s`,`~148 m/s`], a:0, ex:`14.5 ÷ 2.8 = 5.2 cm/ms, ×10 = 52 m/s.`},
+      {q:`To convert cm/ms to m/s you:`, opts:[`Multiply by 10`,`Divide by 10`,`Multiply by 100`,`Do nothing`], a:0, ex:`1 cm/ms = 10 m/s.`},
+      {q:`Motor conduction velocity is calculated using:`, opts:[`Distance between S2 & S1 ÷ (proximal − distal latency)`,`Distance ÷ distal latency only`,`Onset latency alone`,`Amplitude ÷ duration`], a:0, ex:`Two stim sites, excluding the NMJ.`}
     ],
     cheat:[
       {h:"The four measurements", headers:["Term","Unit / note"], rows:[
@@ -815,15 +874,15 @@ const TOPICS = [
       ["Tech","Key to conquering technical/artifact issues?","<span class='hl'>Consistency</span>."]
     ],
     quiz:[
-      {q:"Which stimulus type is used for CMAP (motor)?",opts:["Supramaximal","Maximal","Submaximal","Threshold"],a:0,ex:"CMAP uses <b>supramaximal</b> (20–30% above max); SNAP uses maximal."},
-      {q:"Supramaximal stimulation is defined as…",opts:["20–30% above the intensity for max amplitude","Exactly the max amplitude","Half the max","Any intensity above zero"],a:0,ex:"<b>20–30% above</b> the maximal response intensity."},
-      {q:"Preferred stimulation method and why?",opts:["Constant current — consistent regardless of impedance","Constant voltage — works even if disconnected","Either, no difference","Constant charge"],a:0,ex:"<b>Constant current</b> is preferred for consistency."},
-      {q:"Longer stimulus duration means…",opts:["More painful","Less painful","No pain change","Lower amplitude"],a:0,ex:"Longer duration = <b>more painful</b>."},
-      {q:"A differential amplifier amplifies…",opts:["The difference between two inputs","Each input separately","Only the ground","The 60 Hz signal"],a:0,ex:"The <b>difference</b> between inputs; common signals are rejected."},
-      {q:"Excessive LOW filtering causes…",opts:["Phase lead — waves appear sooner","Phase lag — waves appear later","No effect","Amplitude increase only"],a:0,ex:"Low filter excess → <b>phase lead</b> (sooner)."},
-      {q:"Excessive HIGH filtering causes…",opts:["Phase lag — waves appear later","Phase lead — waves appear sooner","Higher frequencies pass","No change to latency"],a:0,ex:"High filter excess → <b>phase lag</b> (later)."},
-      {q:"The active recording electrode is conventionally…",opts:["(−), black","(+), red","Green","Blue"],a:0,ex:"Active = <b>(−) black</b>; reference = (+) red; ground = green."},
-      {q:"Which is NOT listed as a patient technical factor?",opts:["Line voltage","Temperature","Limb length/height","Age"],a:0,ex:"Patient factors: temperature, limb conditions, age, height, anatomy — not line voltage."}
+      {q:`The stimulus used for a CMAP (motor) study is:`, opts:[`Supramaximal`,`Maximal`,`Submaximal`,`Threshold`], a:0, ex:`CMAP uses supramaximal; SNAP uses maximal.`},
+      {q:`Supramaximal stimulation is defined as:`, opts:[`20–30% above the intensity for maximum amplitude`,`Exactly the maximum amplitude`,`Half the maximum`,`Any intensity above zero`], a:0, ex:`20–30% above the maximal response.`},
+      {q:`The preferred stimulation method is:`, opts:[`Constant current`,`Constant voltage`,`Either, no difference`,`Constant charge`], a:0, ex:`Constant current is more consistent.`},
+      {q:`A longer stimulus duration is:`, opts:[`More painful`,`Less painful`,`No change in pain`,`Lower amplitude`], a:0, ex:`Longer duration = more painful.`},
+      {q:`A differential amplifier amplifies:`, opts:[`The difference between two inputs`,`Each input separately`,`Only the ground`,`The 60 Hz signal`], a:0, ex:`The difference between inputs.`},
+      {q:`Excessive LOW filtering causes:`, opts:[`Phase lead — waves appear sooner`,`Phase lag — waves appear later`,`No effect`,`Amplitude increase only`], a:0, ex:`Low filter excess → phase lead.`},
+      {q:`Excessive HIGH filtering causes:`, opts:[`Phase lag — waves appear later`,`Phase lead — waves appear sooner`,`Higher frequencies pass`,`No latency change`], a:0, ex:`High filter excess → phase lag.`},
+      {q:`The active recording electrode is conventionally:`, opts:[`(−), black`,`(+), red`,`Green`,`Blue`], a:0, ex:`Active = (−) black; reference = (+) red; ground = green.`},
+      {q:`Patient technical factors include all of the following EXCEPT:`, opts:[`Line voltage`,`Temperature`,`Limb length/height`,`Age`], a:0, ex:`Patient factors: temperature, limb conditions, age, height, anatomy.`}
     ],
     cheat:[
       {h:"Stimulus type", headers:["Type","Use"], rows:[
@@ -857,14 +916,14 @@ const TOPICS = [
       ["Sleep","When is active sleep well-differentiated?","By <span class='hl'>37 weeks CA</span> — medium-voltage continuous EEG, REMs, irregular breathing, muscle atonia, phasic twitches."]
     ],
     quiz:[
-      {q:"Gestational age (GA) is measured from…",opts:["The first day of the last menstrual period","Conception","Birth","The first ultrasound"],a:0,ex:"GA (menstrual age) starts at the <b>LMP</b>; CA starts at conception."},
-      {q:"Tracé discontinu is the defining feature of…",opts:["Quiet sleep","Active sleep","Wakefulness","Seizure"],a:0,ex:"Tracé discontinu defines <b>quiet sleep</b>, emerging ~28 weeks PMA."},
-      {q:"By 37–40 weeks, tracé discontinu is replaced by…",opts:["Tracé alternant","Delta brushes","Alpha rhythm","Burst suppression"],a:0,ex:"<b>Tracé alternant</b> fully replaces it by term."},
-      {q:"Delta brushes are most prominent in which regions?",opts:["Occipital and rolandic","Frontal only","Temporal only","Midline vertex"],a:0,ex:"<b>Occipital and rolandic</b> regions."},
-      {q:"A normal newborn first enters which sleep state?",opts:["REM (active) sleep","NREM stage 3","Slow-wave sleep","Stage 2 spindle sleep"],a:0,ex:"Newborns enter <b>REM/active sleep</b> first."},
-      {q:"Newborn quiet-sleep EEG shows…",opts:["High-voltage delta bursts then ~10 s low voltage (discontinuous)","Continuous alpha","Sleep spindles","Flat isoelectric line"],a:0,ex:"Quiet sleep = <b>discontinuous</b> bursts of delta then low voltage."},
-      {q:"Adult-like 90–100 minute sleep cycles appear around…",opts:["School age","Birth","6 weeks","6 months"],a:0,ex:"NREM stages by 6 months, but 90–100 min cycles not until <b>school age</b>."},
-      {q:"A term infant's sleep-wake states cycle roughly every…",opts:["3–4 hours","90 minutes","30 minutes","12 hours"],a:0,ex:"About every <b>3–4 hours</b> in the term newborn."}
+      {q:`Gestational age (GA) is measured from the:`, opts:[`First day of the last menstrual period`,`Time of conception`,`Date of birth`,`First ultrasound`], a:0, ex:`GA starts at the LMP; CA starts at conception.`},
+      {q:`Tracé discontinu is the defining feature of:`, opts:[`Quiet sleep`,`Active sleep`,`Wakefulness`,`Seizure`], a:0, ex:`Defines quiet sleep, ~28 weeks PMA.`},
+      {q:`By 37–40 weeks, tracé discontinu is replaced by:`, opts:[`Tracé alternant`,`Delta brushes`,`Alpha rhythm`,`Burst suppression`], a:0, ex:`Tracé alternant at term.`},
+      {q:`Delta brushes are most prominent in the:`, opts:[`Occipital and rolandic regions`,`Frontal region only`,`Temporal region only`,`Midline vertex`], a:0, ex:`Occipital and rolandic regions.`},
+      {q:`A normal newborn first enters:`, opts:[`REM (active) sleep`,`NREM stage 3`,`Slow-wave sleep`,`Stage 2 spindle sleep`], a:0, ex:`Newborns enter REM/active sleep first.`},
+      {q:`Newborn quiet-sleep EEG shows:`, opts:[`High-voltage delta bursts then ~10 s low voltage`,`Continuous alpha`,`Sleep spindles`,`A flat isoelectric line`], a:0, ex:`Discontinuous — delta bursts then low voltage.`},
+      {q:`Adult-like 90–100 minute sleep cycles appear around:`, opts:[`School age`,`Birth`,`6 weeks`,`6 months`], a:0, ex:`NREM stages by 6 months; cycles not until school age.`},
+      {q:`A term infant's sleep-wake states cycle roughly every:`, opts:[`3–4 hours`,`90 minutes`,`30 minutes`,`12 hours`], a:0, ex:`About every 3–4 hours.`}
     ],
     cheat:[
       {h:"Age terms", headers:["Term","Measured from"], rows:[
@@ -902,14 +961,14 @@ const TOPICS = [
       ["VEP","Why is half-field VEP testing useful?","It's <span class='hl'>more sensitive</span> than full-field for detecting visual-pathway lesions and can reveal abnormality despite normal full-field VEPs."]
     ],
     quiz:[
-      {q:"The primary clinical use of evoked potentials has shifted toward…",opts:["Intraoperative monitoring","Diagnosing migraines","Sleep staging","Cognitive testing"],a:0,ex:"From diagnosis toward <b>intraoperative monitoring</b> to prevent injury."},
-      {q:"Minimum number of normal subjects to validate a reference lab's norms?",opts:["20","5","50","100"],a:0,ex:"At least <b>20</b> normal subjects across the age range."},
-      {q:"In EP studies, latencies are generally abnormal when they are…",opts:["Excessively long","Excessively short","Exactly average","Highly variable"],a:0,ex:"Latencies/interpeak intervals abnormal when <b>too long</b>; amplitudes when too small."},
-      {q:"Why must an evoked potential be replicated?",opts:["To confirm it's neural, not artifact","To increase amplitude","To speed up the study","To reduce cost"],a:0,ex:"Replication proves a <b>neural (not artifactual)</b> origin."},
-      {q:"Averaging is required for EPs because…",opts:["Their amplitude is small vs background noise","They are too fast to see","They have no latency","The patient moves"],a:0,ex:"<b>Small amplitude</b> requires averaging to pull the signal from noise."},
-      {q:"The key pattern-VEP waveform is the…",opts:["P100","N20","Wave V","P300"],a:0,ex:"The <b>P100</b> — a positive peak near 100 ms."},
-      {q:"Recommended high-to-low filter ratio to minimize phase shift?",opts:["At least 100:1","10:1","1:1","1000:1 exactly"],a:0,ex:"At least <b>100:1</b>."},
-      {q:"Half-field VEP testing is valuable because it is…",opts:["More sensitive than full-field for pathway lesions","Faster and needs less cooperation","Always normal","Only for children"],a:0,ex:"Half-field is <b>more sensitive</b> (though more technically demanding)."}
+      {q:`The primary clinical use of evoked potentials has shifted toward:`, opts:[`Intraoperative monitoring`,`Diagnosing migraines`,`Sleep staging`,`Cognitive testing`], a:0, ex:`From diagnosis toward intraoperative monitoring.`},
+      {q:`The minimum number of normal subjects to validate reference norms is:`, opts:[`20`,`5`,`50`,`100`], a:0, ex:`At least 20 across the age range.`},
+      {q:`In EP studies, latencies are generally abnormal when they are:`, opts:[`Excessively long`,`Excessively short`,`Exactly average`,`Highly variable`], a:0, ex:`Latencies abnormal when too long; amplitudes when too small.`},
+      {q:`An evoked potential must be replicated in order to:`, opts:[`Confirm it is neural, not artifact`,`Increase its amplitude`,`Speed up the study`,`Reduce cost`], a:0, ex:`Replication proves neural (not artifactual) origin.`},
+      {q:`Averaging is required for EPs because their amplitude is:`, opts:[`Small relative to background noise`,`Too fast to see`,`Without latency`,`Affected by movement`], a:0, ex:`Small amplitude requires averaging to extract from noise.`},
+      {q:`The key pattern-VEP waveform is the:`, opts:[`P100`,`N20`,`Wave V`,`P300`], a:0, ex:`P100 — a positive peak near 100 ms.`},
+      {q:`The recommended high-to-low filter ratio is at least:`, opts:[`100:1`,`10:1`,`1:1`,`1000:1`], a:0, ex:`At least 100:1 to minimize phase shift.`},
+      {q:`Half-field VEP testing, compared with full-field, is:`, opts:[`More sensitive for pathway lesions`,`Faster and easier`,`Always normal`,`Only for children`], a:0, ex:`More sensitive (though more demanding).`}
     ],
     cheat:[
       {h:"Normative data rules", headers:["Item","Standard"], rows:[
@@ -945,36 +1004,67 @@ const TOPICS = [
       ["Epileptiform","Name this epileptiform discharge.", "A <span class='hl'>spike-and-wave</span> discharge — a sharp spike followed by a slow wave.", EEG.spikeWave()]
     ],
     quiz:[
-      {svg:EEG.rhythm(10), q:"Which rhythm is shown, and what state does it indicate?",
-        opts:["Alpha (8–13 Hz) — awake, relaxed","Delta (0.5–4 Hz) — deep sleep","Beta (13–30 Hz) — alert","Theta (4–8 Hz) — drowsy"],a:0,
-        ex:"Moderate frequency, regular — <b>alpha</b>, the awake-relaxed rhythm."},
-      {svg:EEG.rhythm(2.5), q:"Identify this rhythm.",
-        opts:["Delta (0.5–4 Hz)","Alpha (8–13 Hz)","Beta (13–30 Hz)","Theta (4–8 Hz)"],a:0,
-        ex:"Slow, high-amplitude waves = <b>delta</b> — deep sleep, deep anesthesia, or severe ischemia."},
-      {svg:EEG.rhythm(22), q:"Identify this rhythm.",
-        opts:["Beta (13–30 Hz) — alert/active","Delta — deep sleep","Theta — drowsy","Alpha — relaxed"],a:0,
-        ex:"Fast, low-amplitude activity = <b>beta</b>."},
-      {svg:EEG.fastLoss(), q:"Right after carotid cross-clamping the trace changes like this. What is happening?",
-        opts:["Loss of fast frequencies — earliest ischemia sign","Normal alpha rhythm","Burst suppression","Spike-and-wave seizure"],a:0,
-        ex:"Fast (beta) activity fades first as perfusion drops — the <b>earliest ischemia sign</b>."},
-      {svg:EEG.flat(), q:"What does this end-stage tracing represent?",
-        opts:["Isoelectric / flatline (infarction)","Deep sleep delta","Muscle artifact","Alpha coma"],a:0,
-        ex:"A flat, <b>isoelectric</b> record — profound suppression from infarction (irreversible)."},
-      {svg:EEG.burstSupp(), q:"Bursts of activity alternate with flat periods. Name the pattern.",
-        opts:["Burst suppression","Tracé alternant","Spike-and-wave","Normal beta"],a:0,
-        ex:"<b>Burst suppression</b> — deep anesthesia / neuroprotection (or severe injury)."},
-      {svg:EEG.asymmetry(), q:"The two channels differ — one normal, one slow. This asymmetry suggests…",
-        opts:["Focal/unilateral slowing (possible ischemia)","A global anesthesia effect","Normal symmetric EEG","A calibration error only"],a:0,
-        ex:"<b>Focal, one-sided</b> slowing points to a local problem (e.g., ischemia); anesthesia effects are global/symmetric."},
-      {svg:EEG.spikeWave(), q:"Identify this epileptiform discharge.",
-        opts:["Spike-and-wave","Delta rhythm","Sleep spindle","Burst suppression"],a:0,
-        ex:"A sharp <b>spike</b> immediately followed by a slow <b>wave</b> = spike-and-wave."},
-      {svg:EEG.traceAlt(), q:"A term neonate in quiet sleep shows this. Name it.",
-        opts:["Tracé alternant","Alpha rhythm","Burst suppression from anesthesia","Isoelectric line"],a:0,
-        ex:"<b>Tracé alternant</b> — the alternating discontinuous quiet-sleep pattern at term (tracé discontinu earlier in preterms)."},
-      {svg:EEG.rhythm(6), q:"Identify this rhythm.",
-        opts:["Theta (4–8 Hz) — drowsy/light sleep","Beta — alert","Alpha — relaxed","Delta — deep sleep"],a:0,
-        ex:"Between alpha and delta in speed = <b>theta</b> (drowsiness / light sleep)."}
+      {svg:`<svg viewBox="0 0 680 150" xmlns="http://www.w3.org/2000/svg">
+      <rect x="0" y="0" width="680" height="150" fill="none"/>
+      <line x1="0" y1="75" x2="680" y2="75" stroke="#22384f" stroke-width="1"/>
+      <path d="M 10 75 L 13.0 53.0 L 16.0 92.7 L 19.0 82.8 L 22.0 51.1 L 25.0 86.4 L 28.0 89.7 L 31.0 51.7 L 34.0 79.0 L 37.0 95.1 L 40.0 54.9 L 43.0 71.0 L 46.0 98.3 L 49.0 60.3 L 52.0 63.6 L 55.0 98.9 L 58.0 67.2 L 61.0 57.3 L 64.0 97.0 L 67.0 75.0 L 70.0 53.0 L 73.0 92.7 L 76.0 82.8 L 79.0 51.1 L 82.0 86.4 L 85.0 89.7 L 88.0 51.7 L 91.0 79.0 L 94.0 95.1 L 97.0 54.9 L 100.0 71.0 L 103.0 98.3 L 106.0 60.3 L 109.0 63.6 L 112.0 98.9 L 115.0 67.2 L 118.0 57.3 L 121.0 97.0 L 124.0 75.0 L 127.0 53.0 L 130.0 92.7 L 133.0 82.8 L 136.0 51.1 L 139.0 86.4 L 142.0 89.7 L 145.0 51.7 L 148.0 79.0 L 151.0 95.1 L 154.0 54.9 L 157.0 71.0 L 160.0 98.3 L 163.0 60.3 L 166.0 63.6 L 169.0 98.9 L 172.0 67.2 L 175.0 57.3 L 178.0 97.0 L 181.0 75.0 L 184.0 53.0 L 187.0 92.7 L 190.0 82.8 L 193.0 51.1 L 196.0 86.4 L 199.0 89.7 L 202.0 51.7 L 205.0 79.0 L 208.0 95.1 L 211.0 54.9 L 214.0 71.0 L 217.0 98.3 L 220.0 60.3 L 223.0 63.6 L 226.0 98.9 L 229.0 67.2 L 232.0 57.3 L 235.0 97.0 L 238.0 75.0 L 241.0 53.0 L 244.0 92.7 L 247.0 82.8 L 250.0 51.1 L 253.0 86.4 L 256.0 89.7 L 259.0 51.7 L 262.0 79.0 L 265.0 95.1 L 268.0 54.9 L 271.0 71.0 L 274.0 98.3 L 277.0 60.3 L 280.0 63.6 L 283.0 98.9 L 286.0 67.2 L 289.0 57.3 L 292.0 97.0 L 295.0 75.0 L 298.0 53.0 L 301.0 92.7 L 304.0 82.8 L 307.0 51.1 L 310.0 86.4 L 313.0 89.7 L 316.0 51.7 L 319.0 79.0 L 322.0 95.1 L 325.0 54.9 L 328.0 71.0 L 331.0 98.3 L 334.0 60.3 L 337.0 63.6 L 340.0 98.9 L 343.0 67.2 L 346.0 57.3 L 349.0 97.0 L 352.0 75.0 L 355.0 53.0 L 358.0 92.7 L 361.0 82.8 L 364.0 51.1 L 367.0 86.4 L 370.0 89.7 L 373.0 51.7 L 376.0 79.0 L 379.0 95.1 L 382.0 54.9 L 385.0 71.0 L 388.0 98.3 L 391.0 60.3 L 394.0 63.6 L 397.0 98.9 L 400.0 67.2 L 403.0 57.3 L 406.0 97.0 L 409.0 75.0 L 412.0 53.0 L 415.0 92.7 L 418.0 82.8 L 421.0 51.1 L 424.0 86.4 L 427.0 89.7 L 430.0 51.7 L 433.0 79.0 L 436.0 95.1 L 439.0 54.9 L 442.0 71.0 L 445.0 98.3 L 448.0 60.3 L 451.0 63.6 L 454.0 98.9 L 457.0 67.2 L 460.0 57.3 L 463.0 97.0 L 466.0 75.0 L 469.0 53.0 L 472.0 92.7 L 475.0 82.8 L 478.0 51.1 L 481.0 86.4 L 484.0 89.7 L 487.0 51.7 L 490.0 79.0 L 493.0 95.1 L 496.0 54.9 L 499.0 71.0 L 502.0 98.3 L 505.0 60.3 L 508.0 63.6 L 511.0 98.9 L 514.0 67.2 L 517.0 57.3 L 520.0 97.0 L 523.0 75.0 L 526.0 53.0 L 529.0 92.7 L 532.0 82.8 L 535.0 51.1 L 538.0 86.4 L 541.0 89.7 L 544.0 51.7 L 547.0 79.0 L 550.0 95.1 L 553.0 54.9 L 556.0 71.0 L 559.0 98.3 L 562.0 60.3 L 565.0 63.6 L 568.0 98.9 L 571.0 67.2 L 574.0 57.3 L 577.0 97.0 L 580.0 75.0 L 583.0 53.0 L 586.0 92.7 L 589.0 82.8 L 592.0 51.1 L 595.0 86.4 L 598.0 89.7 L 601.0 51.7 L 604.0 79.0 L 607.0 95.1 L 610.0 54.9 L 613.0 71.0 L 616.0 98.3 L 619.0 60.3 L 622.0 63.6 L 625.0 98.9 L 628.0 67.2 L 631.0 57.3 L 634.0 97.0 L 637.0 75.0 L 640.0 53.0 L 643.0 92.7 L 646.0 82.8 L 649.0 51.1 L 652.0 86.4 L 655.0 89.7 L 658.0 51.7 L 661.0 79.0 L 664.0 95.1 L 667.0 54.9 L 670.0 71.0" fill="none" stroke="#e8542f" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>
+      
+    </svg>`, q:`The rhythm shown, and the state it indicates, is:`, opts:[`Alpha (8–13 Hz) — awake, relaxed`,`Delta (0.5–4 Hz) — deep sleep`,`Beta (13–30 Hz) — alert`,`Theta (4–8 Hz) — drowsy`], a:0, ex:`Moderate, regular — alpha, the awake-relaxed rhythm.`},
+      {svg:`<svg viewBox="0 0 680 150" xmlns="http://www.w3.org/2000/svg">
+      <rect x="0" y="0" width="680" height="150" fill="none"/>
+      <line x1="0" y1="75" x2="680" y2="75" stroke="#22384f" stroke-width="1"/>
+      <path d="M 10 75 L 13.0 51.6 L 16.0 33.6 L 19.0 25.1 L 22.0 27.9 L 25.0 41.1 L 28.0 61.4 L 31.0 84.0 L 34.0 103.3 L 37.0 114.9 L 40.0 115.9 L 43.0 106.4 L 46.0 88.9 L 49.0 67.9 L 52.0 48.7 L 55.0 36.2 L 58.0 33.6 L 61.0 41.8 L 64.0 58.9 L 67.0 81.0 L 70.0 102.7 L 73.0 118.8 L 76.0 125.3 L 79.0 120.4 L 82.0 105.2 L 85.0 83.1 L 88.0 59.1 L 91.0 38.7 L 94.0 26.7 L 97.0 25.7 L 100.0 35.7 L 103.0 54.1 L 106.0 76.6 L 109.0 97.6 L 112.0 112.1 L 115.0 116.8 L 118.0 110.7 L 121.0 95.4 L 124.0 75.0 L 127.0 54.6 L 130.0 39.3 L 133.0 33.2 L 136.0 37.9 L 139.0 52.4 L 142.0 73.4 L 145.0 95.9 L 148.0 114.3 L 151.0 124.3 L 154.0 123.3 L 157.0 111.3 L 160.0 90.9 L 163.0 66.9 L 166.0 44.8 L 169.0 29.6 L 172.0 24.7 L 175.0 31.2 L 178.0 47.3 L 181.0 69.0 L 184.0 91.1 L 187.0 108.2 L 190.0 116.4 L 193.0 113.8 L 196.0 101.3 L 199.0 82.1 L 202.0 61.1 L 205.0 43.6 L 208.0 34.1 L 211.0 35.1 L 214.0 46.7 L 217.0 66.0 L 220.0 88.6 L 223.0 108.9 L 226.0 122.1 L 229.0 124.9 L 232.0 116.4 L 235.0 98.4 L 238.0 75.0 L 241.0 51.6 L 244.0 33.6 L 247.0 25.1 L 250.0 27.9 L 253.0 41.1 L 256.0 61.4 L 259.0 84.0 L 262.0 103.3 L 265.0 114.9 L 268.0 115.9 L 271.0 106.4 L 274.0 88.9 L 277.0 67.9 L 280.0 48.7 L 283.0 36.2 L 286.0 33.6 L 289.0 41.8 L 292.0 58.9 L 295.0 81.0 L 298.0 102.7 L 301.0 118.8 L 304.0 125.3 L 307.0 120.4 L 310.0 105.2 L 313.0 83.1 L 316.0 59.1 L 319.0 38.7 L 322.0 26.7 L 325.0 25.7 L 328.0 35.7 L 331.0 54.1 L 334.0 76.6 L 337.0 97.6 L 340.0 112.1 L 343.0 116.8 L 346.0 110.7 L 349.0 95.4 L 352.0 75.0 L 355.0 54.6 L 358.0 39.3 L 361.0 33.2 L 364.0 37.9 L 367.0 52.4 L 370.0 73.4 L 373.0 95.9 L 376.0 114.3 L 379.0 124.3 L 382.0 123.3 L 385.0 111.3 L 388.0 90.9 L 391.0 66.9 L 394.0 44.8 L 397.0 29.6 L 400.0 24.7 L 403.0 31.2 L 406.0 47.3 L 409.0 69.0 L 412.0 91.1 L 415.0 108.2 L 418.0 116.4 L 421.0 113.8 L 424.0 101.3 L 427.0 82.1 L 430.0 61.1 L 433.0 43.6 L 436.0 34.1 L 439.0 35.1 L 442.0 46.7 L 445.0 66.0 L 448.0 88.6 L 451.0 108.9 L 454.0 122.1 L 457.0 124.9 L 460.0 116.4 L 463.0 98.4 L 466.0 75.0 L 469.0 51.6 L 472.0 33.6 L 475.0 25.1 L 478.0 27.9 L 481.0 41.1 L 484.0 61.4 L 487.0 84.0 L 490.0 103.3 L 493.0 114.9 L 496.0 115.9 L 499.0 106.4 L 502.0 88.9 L 505.0 67.9 L 508.0 48.7 L 511.0 36.2 L 514.0 33.6 L 517.0 41.8 L 520.0 58.9 L 523.0 81.0 L 526.0 102.7 L 529.0 118.8 L 532.0 125.3 L 535.0 120.4 L 538.0 105.2 L 541.0 83.1 L 544.0 59.1 L 547.0 38.7 L 550.0 26.7 L 553.0 25.7 L 556.0 35.7 L 559.0 54.1 L 562.0 76.6 L 565.0 97.6 L 568.0 112.1 L 571.0 116.8 L 574.0 110.7 L 577.0 95.4 L 580.0 75.0 L 583.0 54.6 L 586.0 39.3 L 589.0 33.2 L 592.0 37.9 L 595.0 52.4 L 598.0 73.4 L 601.0 95.9 L 604.0 114.3 L 607.0 124.3 L 610.0 123.3 L 613.0 111.3 L 616.0 90.9 L 619.0 66.9 L 622.0 44.8 L 625.0 29.6 L 628.0 24.7 L 631.0 31.2 L 634.0 47.3 L 637.0 69.0 L 640.0 91.1 L 643.0 108.2 L 646.0 116.4 L 649.0 113.8 L 652.0 101.3 L 655.0 82.1 L 658.0 61.1 L 661.0 43.6 L 664.0 34.1 L 667.0 35.1 L 670.0 46.7" fill="none" stroke="#e8542f" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>
+      
+    </svg>`, q:`The rhythm shown is:`, opts:[`Delta (0.5–4 Hz)`,`Alpha (8–13 Hz)`,`Beta (13–30 Hz)`,`Theta (4–8 Hz)`], a:0, ex:`Slow, high-amplitude = delta.`},
+      {svg:`<svg viewBox="0 0 680 150" xmlns="http://www.w3.org/2000/svg">
+      <rect x="0" y="0" width="680" height="150" fill="none"/>
+      <line x1="0" y1="75" x2="680" y2="75" stroke="#22384f" stroke-width="1"/>
+      <path d="M 10 75 L 13.0 89.1 L 16.0 65.4 L 19.0 67.4 L 22.0 89.8 L 25.0 72.5 L 28.0 61.9 L 31.0 86.4 L 34.0 80.3 L 37.0 60.0 L 40.0 79.9 L 43.0 86.7 L 46.0 62.2 L 49.0 72.0 L 52.0 89.8 L 55.0 67.9 L 58.0 65.0 L 61.0 88.9 L 64.0 75.5 L 67.0 60.7 L 70.0 84.2 L 73.0 83.0 L 76.0 60.3 L 79.0 77.0 L 82.0 88.3 L 85.0 64.0 L 88.0 69.2 L 91.0 90.0 L 94.0 70.6 L 97.0 63.0 L 100.0 87.6 L 103.0 78.4 L 106.0 60.1 L 109.0 81.7 L 112.0 85.3 L 115.0 61.3 L 118.0 74.0 L 121.0 89.4 L 124.0 66.2 L 127.0 66.6 L 130.0 89.5 L 133.0 73.5 L 136.0 61.5 L 139.0 85.7 L 142.0 81.3 L 145.0 60.1 L 148.0 78.9 L 151.0 87.3 L 154.0 62.7 L 157.0 71.1 L 160.0 89.9 L 163.0 68.7 L 166.0 64.3 L 169.0 88.5 L 172.0 76.5 L 175.0 60.5 L 178.0 83.4 L 181.0 83.8 L 184.0 60.6 L 187.0 76.0 L 190.0 88.7 L 193.0 64.7 L 196.0 68.3 L 199.0 89.9 L 202.0 71.6 L 205.0 62.4 L 208.0 87.0 L 211.0 79.4 L 214.0 60.0 L 217.0 80.8 L 220.0 86.0 L 223.0 61.7 L 226.0 73.0 L 229.0 89.7 L 232.0 67.0 L 235.0 65.8 L 238.0 89.3 L 241.0 74.5 L 244.0 61.1 L 247.0 85.0 L 250.0 82.1 L 253.0 60.2 L 256.0 78.0 L 259.0 87.8 L 262.0 63.3 L 265.0 70.1 L 268.0 90.0 L 271.0 69.7 L 274.0 63.6 L 277.0 88.1 L 280.0 77.5 L 283.0 60.2 L 286.0 82.6 L 289.0 84.6 L 292.0 60.9 L 295.0 75.0 L 298.0 89.1 L 301.0 65.4 L 304.0 67.4 L 307.0 89.8 L 310.0 72.5 L 313.0 61.9 L 316.0 86.4 L 319.0 80.3 L 322.0 60.0 L 325.0 79.9 L 328.0 86.7 L 331.0 62.2 L 334.0 72.0 L 337.0 89.8 L 340.0 67.9 L 343.0 65.0 L 346.0 88.9 L 349.0 75.5 L 352.0 60.7 L 355.0 84.2 L 358.0 83.0 L 361.0 60.3 L 364.0 77.0 L 367.0 88.3 L 370.0 64.0 L 373.0 69.2 L 376.0 90.0 L 379.0 70.6 L 382.0 63.0 L 385.0 87.6 L 388.0 78.4 L 391.0 60.1 L 394.0 81.7 L 397.0 85.3 L 400.0 61.3 L 403.0 74.0 L 406.0 89.4 L 409.0 66.2 L 412.0 66.6 L 415.0 89.5 L 418.0 73.5 L 421.0 61.5 L 424.0 85.7 L 427.0 81.3 L 430.0 60.1 L 433.0 78.9 L 436.0 87.3 L 439.0 62.7 L 442.0 71.1 L 445.0 89.9 L 448.0 68.7 L 451.0 64.3 L 454.0 88.5 L 457.0 76.5 L 460.0 60.5 L 463.0 83.4 L 466.0 83.8 L 469.0 60.6 L 472.0 76.0 L 475.0 88.7 L 478.0 64.7 L 481.0 68.3 L 484.0 89.9 L 487.0 71.6 L 490.0 62.4 L 493.0 87.0 L 496.0 79.4 L 499.0 60.0 L 502.0 80.8 L 505.0 86.0 L 508.0 61.7 L 511.0 73.0 L 514.0 89.7 L 517.0 67.0 L 520.0 65.8 L 523.0 89.3 L 526.0 74.5 L 529.0 61.1 L 532.0 85.0 L 535.0 82.1 L 538.0 60.2 L 541.0 78.0 L 544.0 87.8 L 547.0 63.3 L 550.0 70.1 L 553.0 90.0 L 556.0 69.7 L 559.0 63.6 L 562.0 88.1 L 565.0 77.5 L 568.0 60.2 L 571.0 82.6 L 574.0 84.6 L 577.0 60.9 L 580.0 75.0 L 583.0 89.1 L 586.0 65.4 L 589.0 67.4 L 592.0 89.8 L 595.0 72.5 L 598.0 61.9 L 601.0 86.4 L 604.0 80.3 L 607.0 60.0 L 610.0 79.9 L 613.0 86.7 L 616.0 62.2 L 619.0 72.0 L 622.0 89.8 L 625.0 67.9 L 628.0 65.0 L 631.0 88.9 L 634.0 75.5 L 637.0 60.7 L 640.0 84.2 L 643.0 83.0 L 646.0 60.3 L 649.0 77.0 L 652.0 88.3 L 655.0 64.0 L 658.0 69.2 L 661.0 90.0 L 664.0 70.6 L 667.0 63.0 L 670.0 87.6" fill="none" stroke="#e8542f" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>
+      
+    </svg>`, q:`The rhythm shown is:`, opts:[`Beta (13–30 Hz) — alert/active`,`Delta — deep sleep`,`Theta — drowsy`,`Alpha — relaxed`], a:0, ex:`Fast, low-amplitude = beta.`},
+      {svg:`<svg viewBox="0 0 680 150" xmlns="http://www.w3.org/2000/svg">
+      <rect x="0" y="0" width="680" height="150" fill="none"/>
+      <line x1="0" y1="75" x2="680" y2="75" stroke="#22384f" stroke-width="1"/>
+      <path d="M 10 75 L 13.0 68.2 L 16.0 87.4 L 19.0 59.5 L 22.0 90.7 L 25.0 62.1 L 28.0 82.6 L 31.0 74.2 L 34.0 68.9 L 37.0 86.8 L 40.0 59.7 L 43.0 90.8 L 46.0 61.7 L 49.0 83.3 L 52.0 73.4 L 55.0 69.7 L 58.0 86.3 L 61.0 60.0 L 64.0 90.9 L 67.0 61.2 L 70.0 83.9 L 73.0 72.6 L 76.0 70.4 L 79.0 85.7 L 82.0 60.2 L 85.0 91.0 L 88.0 60.9 L 91.0 84.6 L 94.0 71.8 L 97.0 71.2 L 100.0 85.1 L 103.0 60.6 L 106.0 91.0 L 109.0 60.5 L 112.0 85.2 L 115.0 71.0 L 118.0 72.0 L 121.0 84.4 L 124.0 60.9 L 127.0 91.0 L 130.0 60.2 L 133.0 85.8 L 136.0 70.2 L 139.0 72.8 L 142.0 83.8 L 145.0 61.3 L 148.0 90.9 L 151.0 59.9 L 154.0 86.4 L 157.0 69.5 L 160.0 73.6 L 163.0 83.1 L 166.0 61.8 L 169.0 90.8 L 172.0 59.6 L 175.0 87.0 L 178.0 68.7 L 181.0 74.4 L 184.0 82.4 L 187.0 62.3 L 190.0 90.7 L 193.0 59.4 L 196.0 87.5 L 199.0 68.0 L 202.0 75.2 L 205.0 81.7 L 208.0 62.8 L 211.0 90.5 L 214.0 59.3 L 217.0 88.0 L 220.0 67.3 L 223.0 76.0 L 226.0 80.9 L 229.0 63.3 L 232.0 90.2 L 235.0 59.1 L 238.0 88.4 L 241.0 66.6 L 244.0 76.8 L 247.0 80.2 L 250.0 63.9 L 253.0 90.0 L 256.0 59.1 L 259.0 88.9 L 262.0 65.9 L 265.0 77.6 L 268.0 79.4 L 271.0 64.5 L 274.0 89.7 L 277.0 59.0 L 280.0 89.2 L 283.0 65.2 L 286.0 78.4 L 289.0 78.6 L 292.0 65.1 L 295.0 89.3 L 298.0 59.0 L 301.0 89.6 L 304.0 64.6 L 307.0 79.2 L 310.0 78.1 L 313.0 66.4 L 316.0 89.2 L 319.0 60.1 L 322.0 89.6 L 325.0 64.4 L 328.0 78.9 L 331.0 75.5 L 334.0 64.9 L 337.0 84.7 L 340.0 57.5 L 343.0 85.5 L 346.0 61.7 L 349.0 77.7 L 352.0 74.6 L 355.0 67.9 L 358.0 87.4 L 361.0 64.2 L 364.0 92.0 L 367.0 70.0 L 370.0 86.2 L 373.0 81.4 L 376.0 74.9 L 379.0 90.0 L 382.0 66.0 L 385.0 88.7 L 388.0 64.4 L 391.0 77.5 L 394.0 69.4 L 397.0 63.0 L 400.0 75.6 L 403.0 54.7 L 406.0 77.7 L 409.0 57.9 L 412.0 74.7 L 415.0 70.8 L 418.0 70.6 L 421.0 85.7 L 424.0 70.5 L 427.0 94.1 L 430.0 76.6 L 433.0 92.3 L 436.0 85.6 L 439.0 82.8 L 442.0 90.8 L 445.0 71.8 L 448.0 87.2 L 451.0 65.0 L 454.0 74.9 L 457.0 64.1 L 460.0 60.4 L 463.0 66.8 L 466.0 51.9 L 469.0 69.6 L 472.0 54.9 L 475.0 71.1 L 478.0 68.0 L 481.0 72.8 L 484.0 84.5 L 487.0 77.0 L 490.0 96.1 L 493.0 83.9 L 496.0 97.7 L 499.0 90.5 L 502.0 89.8 L 505.0 92.0 L 508.0 77.3 L 511.0 85.1 L 514.0 66.0 L 517.0 71.4 L 520.0 59.5 L 523.0 56.9 L 526.0 58.4 L 529.0 49.0 L 532.0 61.3 L 535.0 52.5 L 538.0 66.9 L 541.0 66.3 L 544.0 74.5 L 547.0 84.1 L 550.0 83.4 L 553.0 98.0 L 556.0 91.8 L 559.0 102.3 L 562.0 96.3 L 565.0 95.9 L 568.0 93.6 L 571.0 82.3 L 574.0 82.8 L 577.0 67.2 L 580.0 67.0 L 583.0 55.6 L 586.0 52.5 L 589.0 50.6 L 592.0 45.8 L 595.0 53.1 L 598.0 50.7 L 601.0 62.2 L 604.0 65.6 L 607.0 75.5 L 610.0 84.6 L 613.0 89.6 L 616.0 100.1 L 619.0 100.1 L 622.0 106.3 L 625.0 102.9 L 628.0 101.1 L 631.0 95.8 L 634.0 86.7 L 637.0 80.4 L 640.0 68.5 L 643.0 61.8 L 646.0 52.3 L 649.0 47.1 L 652.0 43.5 L 655.0 42.1 L 658.0 45.2 L 661.0 49.2 L 664.0 57.1 L 667.0 65.8 L 670.0 75.9" fill="none" stroke="#e8542f" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>
+      <text x="8" y="18" fill="#7fb5a5" font-family="monospace" font-size="12">fast → slow</text>
+    </svg>`, q:`Immediately after carotid cross-clamping, this change represents:`, opts:[`Loss of fast frequencies — earliest ischemia sign`,`Normal alpha rhythm`,`Burst suppression`,`Spike-and-wave seizure`], a:0, ex:`Fast (beta) activity fades first — the earliest ischemia sign.`},
+      {svg:`<svg viewBox="0 0 680 150" xmlns="http://www.w3.org/2000/svg">
+      <rect x="0" y="0" width="680" height="150" fill="none"/>
+      <line x1="0" y1="75" x2="680" y2="75" stroke="#22384f" stroke-width="1"/>
+      <path d="M 10 75.20583651764882 L 13.0 74.1 L 16.0 74.8 L 19.0 74.1 L 22.0 73.9 L 25.0 74.0 L 28.0 76.0 L 31.0 74.3 L 34.0 74.3 L 37.0 75.3 L 40.0 75.6 L 43.0 75.4 L 46.0 75.8 L 49.0 75.9 L 52.0 74.9 L 55.0 74.5 L 58.0 75.5 L 61.0 75.5 L 64.0 74.4 L 67.0 74.4 L 70.0 75.4 L 73.0 74.6 L 76.0 75.1 L 79.0 74.7 L 82.0 75.3 L 85.0 75.2 L 88.0 75.5 L 91.0 75.2 L 94.0 75.5 L 97.0 75.4 L 100.0 76.0 L 103.0 73.8 L 106.0 74.7 L 109.0 74.8 L 112.0 75.4 L 115.0 74.5 L 118.0 73.9 L 121.0 75.2 L 124.0 74.7 L 127.0 73.8 L 130.0 74.7 L 133.0 75.9 L 136.0 74.3 L 139.0 76.0 L 142.0 74.0 L 145.0 75.5 L 148.0 74.6 L 151.0 75.3 L 154.0 74.1 L 157.0 74.2 L 160.0 76.0 L 163.0 76.0 L 166.0 74.7 L 169.0 75.0 L 172.0 74.6 L 175.0 75.0 L 178.0 76.1 L 181.0 76.0 L 184.0 75.9 L 187.0 74.5 L 190.0 75.4 L 193.0 75.5 L 196.0 75.4 L 199.0 76.0 L 202.0 76.2 L 205.0 76.2 L 208.0 74.0 L 211.0 75.3 L 214.0 74.1 L 217.0 75.2 L 220.0 75.8 L 223.0 75.8 L 226.0 75.6 L 229.0 75.1 L 232.0 75.9 L 235.0 74.5 L 238.0 75.0 L 241.0 74.9 L 244.0 74.9 L 247.0 74.5 L 250.0 74.4 L 253.0 75.5 L 256.0 73.9 L 259.0 74.2 L 262.0 74.2 L 265.0 74.6 L 268.0 74.7 L 271.0 74.2 L 274.0 74.0 L 277.0 74.4 L 280.0 74.7 L 283.0 74.9 L 286.0 75.9 L 289.0 74.3 L 292.0 75.9 L 295.0 75.4 L 298.0 74.5 L 301.0 74.9 L 304.0 74.0 L 307.0 73.9 L 310.0 73.9 L 313.0 74.6 L 316.0 75.2 L 319.0 75.8 L 322.0 74.7 L 325.0 74.3 L 328.0 75.8 L 331.0 74.0 L 334.0 75.8 L 337.0 74.3 L 340.0 74.1 L 343.0 76.2 L 346.0 74.2 L 349.0 75.3 L 352.0 75.1 L 355.0 74.3 L 358.0 76.2 L 361.0 76.2 L 364.0 75.5 L 367.0 75.3 L 370.0 75.9 L 373.0 74.8 L 376.0 74.3 L 379.0 73.9 L 382.0 74.5 L 385.0 75.3 L 388.0 74.0 L 391.0 74.4 L 394.0 75.9 L 397.0 74.5 L 400.0 75.7 L 403.0 75.9 L 406.0 75.2 L 409.0 74.2 L 412.0 76.0 L 415.0 73.8 L 418.0 74.8 L 421.0 76.2 L 424.0 73.9 L 427.0 75.6 L 430.0 75.1 L 433.0 74.4 L 436.0 75.8 L 439.0 76.0 L 442.0 75.1 L 445.0 74.5 L 448.0 74.0 L 451.0 75.8 L 454.0 74.5 L 457.0 75.0 L 460.0 75.0 L 463.0 74.6 L 466.0 75.6 L 469.0 76.2 L 472.0 75.6 L 475.0 75.0 L 478.0 74.2 L 481.0 76.0 L 484.0 74.1 L 487.0 75.6 L 490.0 74.0 L 493.0 75.7 L 496.0 75.3 L 499.0 75.2 L 502.0 74.0 L 505.0 75.4 L 508.0 76.0 L 511.0 75.7 L 514.0 74.6 L 517.0 75.4 L 520.0 73.9 L 523.0 73.9 L 526.0 74.9 L 529.0 75.1 L 532.0 75.7 L 535.0 75.1 L 538.0 74.6 L 541.0 75.7 L 544.0 75.6 L 547.0 75.1 L 550.0 75.5 L 553.0 74.8 L 556.0 75.3 L 559.0 74.5 L 562.0 74.9 L 565.0 75.1 L 568.0 74.9 L 571.0 75.4 L 574.0 76.2 L 577.0 74.4 L 580.0 75.3 L 583.0 75.8 L 586.0 75.2 L 589.0 74.5 L 592.0 74.8 L 595.0 74.7 L 598.0 74.5 L 601.0 76.0 L 604.0 73.9 L 607.0 74.2 L 610.0 75.8 L 613.0 74.2 L 616.0 75.4 L 619.0 74.2 L 622.0 74.9 L 625.0 74.9 L 628.0 75.1 L 631.0 74.1 L 634.0 73.9 L 637.0 74.1 L 640.0 75.4 L 643.0 74.9 L 646.0 75.1 L 649.0 74.7 L 652.0 76.1 L 655.0 74.7 L 658.0 75.7 L 661.0 75.2 L 664.0 74.1 L 667.0 75.1 L 670.0 74.5" fill="none" stroke="#e8542f" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>
+      <text x="8" y="18" fill="#7fb5a5" font-family="monospace" font-size="12">isoelectric</text>
+    </svg>`, q:`This end-stage tracing represents:`, opts:[`Isoelectric / flatline (infarction)`,`Deep sleep delta`,`Muscle artifact`,`Alpha coma`], a:0, ex:`A flat, isoelectric record — infarction (irreversible).`},
+      {svg:`<svg viewBox="0 0 680 150" xmlns="http://www.w3.org/2000/svg">
+      <rect x="0" y="0" width="680" height="150" fill="none"/>
+      <line x1="0" y1="75" x2="680" y2="75" stroke="#22384f" stroke-width="1"/>
+      <path d="M 10 74.31738588418916 L 12.5 75.6 L 15.0 74.9 L 17.5 75.9 L 20.0 75.8 L 22.5 74.7 L 25.0 75.6 L 27.5 75.1 L 30.0 75.0 L 32.5 57.8 L 35.0 72.4 L 37.5 93.5 L 40.0 80.5 L 42.5 55.7 L 45.0 66.2 L 47.5 94.5 L 50.0 87.3 L 52.5 55.9 L 55.0 59.1 L 57.5 92.9 L 60.0 94.4 L 62.5 59.0 L 65.0 52.4 L 67.5 88.4 L 70.0 100.4 L 72.5 64.8 L 75.0 47.4 L 77.5 81.5 L 80.0 104.2 L 82.5 72.5 L 85.0 45.1 L 87.5 73.3 L 90.0 104.8 L 92.5 80.9 L 95.0 46.2 L 97.5 65.1 L 100.0 102.0 L 102.5 88.6 L 105.0 50.4 L 107.5 58.3 L 110.0 96.6 L 112.5 94.1 L 115.0 56.9 L 117.5 54.2 L 120.0 89.4 L 122.5 96.8 L 125.0 64.3 L 127.5 53.0 L 130.0 82.0 L 132.5 96.6 L 135.0 71.4 L 137.5 54.5 L 140.0 75.5 L 142.5 93.9 L 145.0 77.1 L 147.5 58.0 L 150.0 70.8 L 152.5 75.1 L 155.0 75.0 L 157.5 75.2 L 160.0 75.0 L 162.5 75.5 L 165.0 75.5 L 167.5 75.0 L 170.0 75.5 L 172.5 74.1 L 175.0 74.8 L 177.5 75.2 L 180.0 75.0 L 182.5 75.8 L 185.0 74.5 L 187.5 74.8 L 190.0 75.4 L 192.5 75.5 L 195.0 75.1 L 197.5 75.8 L 200.0 74.5 L 202.5 75.9 L 205.0 75.6 L 207.5 74.7 L 210.0 74.4 L 212.5 74.7 L 215.0 74.6 L 217.5 74.5 L 220.0 75.0 L 222.5 74.4 L 225.0 74.6 L 227.5 74.9 L 230.0 75.7 L 232.5 75.1 L 235.0 75.4 L 237.5 75.2 L 240.0 74.8 L 242.5 74.4 L 245.0 74.5 L 247.5 74.2 L 250.0 75.0 L 252.5 57.8 L 255.0 72.4 L 257.5 93.5 L 260.0 80.5 L 262.5 55.7 L 265.0 66.2 L 267.5 94.5 L 270.0 87.3 L 272.5 55.9 L 275.0 59.1 L 277.5 92.9 L 280.0 94.4 L 282.5 59.0 L 285.0 52.4 L 287.5 88.4 L 290.0 100.4 L 292.5 64.8 L 295.0 47.4 L 297.5 81.5 L 300.0 104.2 L 302.5 72.5 L 305.0 45.1 L 307.5 73.3 L 310.0 104.8 L 312.5 80.9 L 315.0 46.2 L 317.5 65.1 L 320.0 102.0 L 322.5 88.6 L 325.0 50.4 L 327.5 58.3 L 330.0 96.6 L 332.5 94.1 L 335.0 56.9 L 337.5 54.2 L 340.0 89.4 L 342.5 96.8 L 345.0 64.3 L 347.5 53.0 L 350.0 82.0 L 352.5 96.6 L 355.0 71.4 L 357.5 54.5 L 360.0 75.5 L 362.5 93.9 L 365.0 77.1 L 367.5 58.0 L 370.0 70.8 L 372.5 74.2 L 375.0 74.6 L 377.5 74.9 L 380.0 74.7 L 382.5 75.2 L 385.0 75.1 L 387.5 75.3 L 390.0 75.6 L 392.5 75.2 L 395.0 75.7 L 397.5 74.2 L 400.0 74.0 L 402.5 74.6 L 405.0 74.2 L 407.5 75.0 L 410.0 74.3 L 412.5 75.4 L 415.0 75.5 L 417.5 75.0 L 420.0 75.3 L 422.5 74.6 L 425.0 74.5 L 427.5 74.6 L 430.0 74.1 L 432.5 74.7 L 435.0 74.1 L 437.5 74.8 L 440.0 74.6 L 442.5 75.5 L 445.0 75.0 L 447.5 75.2 L 450.0 74.6 L 452.5 74.9 L 455.0 74.4 L 457.5 75.8 L 460.0 75.6 L 462.5 75.7 L 465.0 74.5 L 467.5 74.8 L 470.0 75.0 L 472.5 57.8 L 475.0 72.4 L 477.5 93.5 L 480.0 80.5 L 482.5 55.7 L 485.0 66.2 L 487.5 94.5 L 490.0 87.3 L 492.5 55.9 L 495.0 59.1 L 497.5 92.9 L 500.0 94.4 L 502.5 59.0 L 505.0 52.4 L 507.5 88.4 L 510.0 100.4 L 512.5 64.8 L 515.0 47.4 L 517.5 81.5 L 520.0 104.2 L 522.5 72.5 L 525.0 45.1 L 527.5 73.3 L 530.0 104.8 L 532.5 80.9 L 535.0 46.2 L 537.5 65.1 L 540.0 102.0 L 542.5 88.6 L 545.0 50.4 L 547.5 58.3 L 550.0 96.6 L 552.5 94.1 L 555.0 56.9 L 557.5 54.2 L 560.0 89.4 L 562.5 96.8 L 565.0 64.3 L 567.5 53.0 L 570.0 82.0 L 572.5 96.6 L 575.0 71.4 L 577.5 54.5 L 580.0 75.5 L 582.5 93.9 L 585.0 77.1 L 587.5 58.0 L 590.0 70.8 L 592.5 75.6 L 595.0 74.9 L 597.5 75.5 L 600.0 75.0 L 602.5 75.3 L 605.0 74.9 L 607.5 74.0 L 610.0 75.7 L 612.5 75.1 L 615.0 74.1 L 617.5 74.0 L 620.0 76.0 L 622.5 74.6 L 625.0 75.9 L 627.5 74.5 L 630.0 74.0 L 632.5 75.4 L 635.0 75.2 L 637.5 75.1 L 640.0 75.3 L 642.5 75.8 L 645.0 75.1 L 647.5 74.2 L 650.0 74.7 L 652.5 75.5 L 655.0 74.3 L 657.5 75.6 L 660.0 74.8 L 662.5 75.9 L 665.0 74.1 L 667.5 74.7 L 670.0 75.2" fill="none" stroke="#e8542f" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>
+      <text x="8" y="18" fill="#7fb5a5" font-family="monospace" font-size="12">burst — suppression</text>
+    </svg>`, q:`Bursts alternating with flat periods is called:`, opts:[`Burst suppression`,`Tracé alternant`,`Spike-and-wave`,`Normal beta`], a:0, ex:`Burst suppression — deep anesthesia / neuroprotection.`},
+      {svg:`<svg viewBox="0 0 680 150" xmlns="http://www.w3.org/2000/svg">
+      <line x1="0" y1="42.00000000000001" x2="680" y2="42.00000000000001" stroke="#22384f" stroke-width="1"/>
+      <line x1="0" y1="108" x2="680" y2="108" stroke="#22384f" stroke-width="1"/>
+      <path d="M 10 42.00000000000001 L 13.0 34.2 L 16.0 55.0 L 19.0 28.3 L 22.0 51.8 L 25.0 39.4 L 28.0 36.4 L 31.0 53.8 L 34.0 28.0 L 37.0 53.5 L 40.0 37.0 L 43.0 38.9 L 46.0 52.2 L 49.0 28.2 L 52.0 54.7 L 55.0 34.7 L 58.0 41.4 L 61.0 50.3 L 64.0 28.8 L 67.0 55.6 L 70.0 32.6 L 73.0 44.0 L 76.0 48.1 L 79.0 29.9 L 82.0 56.0 L 85.0 30.9 L 88.0 46.5 L 91.0 45.7 L 94.0 31.4 L 97.0 55.9 L 100.0 29.5 L 103.0 48.8 L 106.0 43.1 L 109.0 33.3 L 112.0 55.3 L 115.0 28.6 L 118.0 51.0 L 121.0 40.6 L 124.0 35.4 L 127.0 54.4 L 130.0 28.1 L 133.0 52.8 L 136.0 38.1 L 139.0 37.8 L 142.0 52.9 L 145.0 28.0 L 148.0 54.2 L 151.0 35.7 L 154.0 40.3 L 157.0 51.2 L 160.0 28.5 L 163.0 55.3 L 166.0 33.5 L 169.0 42.9 L 172.0 49.1 L 175.0 29.4 L 178.0 55.9 L 181.0 31.6 L 184.0 45.4 L 187.0 46.8 L 190.0 30.7 L 193.0 56.0 L 196.0 30.1 L 199.0 47.8 L 202.0 44.3 L 205.0 32.4 L 208.0 55.6 L 211.0 28.9 L 214.0 50.0 L 217.0 41.7 L 220.0 34.4 L 223.0 54.8 L 226.0 28.2 L 229.0 52.0 L 232.0 39.2 L 235.0 36.7 L 238.0 53.6 L 241.0 28.0 L 244.0 53.6 L 247.0 36.7 L 250.0 39.2 L 253.0 52.0 L 256.0 28.2 L 259.0 54.9 L 262.0 34.4 L 265.0 41.7 L 268.0 50.0 L 271.0 28.9 L 274.0 55.7 L 277.0 32.4 L 280.0 44.3 L 283.0 47.8 L 286.0 30.1 L 289.0 56.0 L 292.0 30.7 L 295.0 46.8 L 298.0 45.4 L 301.0 31.6 L 304.0 55.9 L 307.0 29.4 L 310.0 49.1 L 313.0 42.8 L 316.0 33.5 L 319.0 55.3 L 322.0 28.5 L 325.0 51.2 L 328.0 40.3 L 331.0 35.7 L 334.0 54.2 L 337.0 28.0 L 340.0 53.0 L 343.0 37.8 L 346.0 38.1 L 349.0 52.8 L 352.0 28.1 L 355.0 54.4 L 358.0 35.4 L 361.0 40.6 L 364.0 50.9 L 367.0 28.6 L 370.0 55.4 L 373.0 33.3 L 376.0 43.2 L 379.0 48.8 L 382.0 29.5 L 385.0 55.9 L 388.0 31.4 L 391.0 45.7 L 394.0 46.5 L 397.0 30.9 L 400.0 56.0 L 403.0 29.9 L 406.0 48.1 L 409.0 44.0 L 412.0 32.6 L 415.0 55.6 L 418.0 28.8 L 421.0 50.3 L 424.0 41.4 L 427.0 34.7 L 430.0 54.7 L 433.0 28.2 L 436.0 52.2 L 439.0 38.9 L 442.0 37.0 L 445.0 53.5 L 448.0 28.0 L 451.0 53.8 L 454.0 36.4 L 457.0 39.5 L 460.0 51.8 L 463.0 28.3 L 466.0 55.0 L 469.0 34.2 L 472.0 42.0 L 475.0 49.8 L 478.0 29.0 L 481.0 55.7 L 484.0 32.2 L 487.0 44.6 L 490.0 47.5 L 493.0 30.2 L 496.0 56.0 L 499.0 30.5 L 502.0 47.0 L 505.0 45.1 L 508.0 31.8 L 511.0 55.8 L 514.0 29.3 L 517.0 49.3 L 520.0 42.6 L 523.0 33.7 L 526.0 55.2 L 529.0 28.4 L 532.0 51.4 L 535.0 40.0 L 538.0 35.9 L 541.0 54.1 L 544.0 28.0 L 547.0 53.1 L 550.0 37.5 L 553.0 38.3 L 556.0 52.6 L 559.0 28.1 L 562.0 54.5 L 565.0 35.2 L 568.0 40.9 L 571.0 50.7 L 574.0 28.7 L 577.0 55.4 L 580.0 33.0 L 583.0 43.4 L 586.0 48.6 L 589.0 29.7 L 592.0 55.9 L 595.0 31.2 L 598.0 46.0 L 601.0 46.2 L 604.0 31.1 L 607.0 56.0 L 610.0 29.8 L 613.0 48.3 L 616.0 43.7 L 619.0 32.8 L 622.0 55.5 L 625.0 28.7 L 628.0 50.5 L 631.0 41.1 L 634.0 34.9 L 637.0 54.6 L 640.0 28.1 L 643.0 52.4 L 646.0 38.6 L 649.0 37.3 L 652.0 53.3 L 655.0 28.0 L 658.0 53.9 L 661.0 36.2 L 664.0 39.7 L 667.0 51.6 L 670.0 28.4" fill="none" stroke="#e8542f" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/><path d="M 10 108 L 13.0 96.6 L 16.0 86.9 L 19.0 80.4 L 22.0 78.0 L 25.0 80.1 L 28.0 86.4 L 31.0 96.0 L 34.0 107.4 L 37.0 118.8 L 40.0 128.6 L 43.0 135.4 L 46.0 138.0 L 49.0 136.1 L 52.0 130.0 L 55.0 120.6 L 58.0 109.3 L 61.0 97.8 L 64.0 87.8 L 67.0 80.9 L 70.0 78.0 L 73.0 79.7 L 76.0 85.6 L 79.0 94.8 L 82.0 106.1 L 85.0 117.6 L 88.0 127.7 L 91.0 134.8 L 94.0 137.9 L 97.0 136.5 L 100.0 130.9 L 103.0 121.8 L 106.0 110.6 L 109.0 99.0 L 112.0 88.8 L 115.0 81.5 L 118.0 78.1 L 121.0 79.3 L 124.0 84.7 L 127.0 93.7 L 130.0 104.8 L 133.0 116.3 L 136.0 126.7 L 139.0 134.2 L 142.0 137.8 L 145.0 136.9 L 148.0 131.7 L 151.0 122.9 L 154.0 111.9 L 157.0 100.3 L 160.0 89.8 L 163.0 82.1 L 166.0 78.3 L 169.0 78.9 L 172.0 83.9 L 175.0 92.5 L 178.0 103.5 L 181.0 115.1 L 184.0 125.6 L 187.0 133.5 L 190.0 137.6 L 193.0 137.2 L 196.0 132.5 L 199.0 124.0 L 202.0 113.2 L 205.0 101.5 L 208.0 90.9 L 211.0 82.8 L 214.0 78.5 L 217.0 78.6 L 220.0 83.2 L 223.0 91.5 L 226.0 102.2 L 229.0 113.8 L 232.0 124.6 L 235.0 132.8 L 238.0 137.4 L 241.0 137.5 L 244.0 133.2 L 247.0 125.1 L 250.0 114.4 L 253.0 102.8 L 256.0 92.0 L 259.0 83.5 L 262.0 78.8 L 265.0 78.4 L 268.0 82.5 L 271.0 90.4 L 274.0 100.9 L 277.0 112.6 L 280.0 123.5 L 283.0 132.1 L 286.0 137.1 L 289.0 137.7 L 292.0 133.9 L 295.0 126.1 L 298.0 115.7 L 301.0 104.1 L 304.0 93.1 L 307.0 84.3 L 310.0 79.1 L 313.0 78.2 L 316.0 81.8 L 319.0 89.4 L 322.0 99.7 L 325.0 111.3 L 328.0 122.4 L 331.0 131.3 L 334.0 136.7 L 337.0 137.9 L 340.0 134.5 L 343.0 127.1 L 346.0 116.9 L 349.0 105.4 L 352.0 94.2 L 355.0 85.1 L 358.0 79.5 L 361.0 78.1 L 364.0 81.2 L 367.0 88.4 L 370.0 98.5 L 373.0 110.0 L 376.0 121.2 L 379.0 130.5 L 382.0 136.3 L 385.0 138.0 L 388.0 135.1 L 391.0 128.1 L 394.0 118.2 L 397.0 106.7 L 400.0 95.4 L 403.0 86.0 L 406.0 79.9 L 409.0 78.0 L 412.0 80.7 L 415.0 87.4 L 418.0 97.2 L 421.0 108.7 L 424.0 120.0 L 427.0 129.6 L 430.0 135.9 L 433.0 138.0 L 436.0 135.6 L 439.0 129.1 L 442.0 119.4 L 445.0 108.0 L 448.0 96.6 L 451.0 86.9 L 454.0 80.4 L 457.0 78.0 L 460.0 80.1 L 463.0 86.5 L 466.0 96.0 L 469.0 107.4 L 472.0 118.8 L 475.0 128.7 L 478.0 135.4 L 481.0 138.0 L 484.0 136.1 L 487.0 130.0 L 490.0 120.6 L 493.0 109.3 L 496.0 97.8 L 499.0 87.8 L 502.0 80.9 L 505.0 78.0 L 508.0 79.7 L 511.0 85.6 L 514.0 94.9 L 517.0 106.1 L 520.0 117.6 L 523.0 127.7 L 526.0 134.8 L 529.0 137.9 L 532.0 136.5 L 535.0 130.8 L 538.0 121.7 L 541.0 110.5 L 544.0 99.0 L 547.0 88.8 L 550.0 81.5 L 553.0 78.1 L 556.0 79.3 L 559.0 84.8 L 562.0 93.7 L 565.0 104.8 L 568.0 116.4 L 571.0 126.7 L 574.0 134.2 L 577.0 137.8 L 580.0 136.9 L 583.0 131.7 L 586.0 122.9 L 589.0 111.8 L 592.0 100.2 L 595.0 89.8 L 598.0 82.1 L 601.0 78.3 L 604.0 78.9 L 607.0 84.0 L 610.0 92.6 L 613.0 103.5 L 616.0 115.1 L 619.0 125.7 L 622.0 133.6 L 625.0 137.6 L 628.0 137.2 L 631.0 132.4 L 634.0 124.0 L 637.0 113.1 L 640.0 101.5 L 643.0 90.8 L 646.0 82.8 L 649.0 78.5 L 652.0 78.6 L 655.0 83.2 L 658.0 91.5 L 661.0 102.2 L 664.0 113.9 L 667.0 124.6 L 670.0 132.9" fill="none" stroke="#f0a58c" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>
+      <text x="8" y="34.00000000000001" fill="#7fb5a5" font-family="monospace" font-size="11">L (normal)</text>
+      <text x="8" y="100" fill="#7fb5a5" font-family="monospace" font-size="11">R (slow)</text>
+    </svg>`, q:`One channel normal, one slow. This asymmetry indicates:`, opts:[`Focal/unilateral slowing (possible ischemia)`,`A global anesthesia effect`,`Normal symmetric EEG`,`A calibration error only`], a:0, ex:`Focal, one-sided slowing points to a local problem.`},
+      {svg:`<svg viewBox="0 0 680 150" xmlns="http://www.w3.org/2000/svg">
+      <rect x="0" y="0" width="680" height="150" fill="none"/>
+      <line x1="0" y1="75" x2="680" y2="75" stroke="#22384f" stroke-width="1"/>
+      <path d="M 10 75.00000000010789 L 12.0 75.0 L 14.0 75.0 L 16.0 75.0 L 18.0 75.0 L 20.0 75.0 L 22.0 75.0 L 24.0 75.0 L 26.0 75.0 L 28.0 75.0 L 30.0 75.0 L 32.0 75.0 L 34.0 75.0 L 36.0 75.0 L 38.0 75.0 L 40.0 75.0 L 42.0 75.0 L 44.0 75.0 L 46.0 75.0 L 48.0 75.0 L 50.0 75.0 L 52.0 75.0 L 54.0 75.0 L 56.0 75.0 L 58.0 75.0 L 60.0 75.0 L 62.0 75.0 L 64.0 75.0 L 66.0 75.0 L 68.0 75.0 L 70.0 75.0 L 72.0 75.0 L 74.0 75.0 L 76.0 75.0 L 78.0 75.0 L 80.0 75.0 L 82.0 75.0 L 84.0 75.0 L 86.0 75.0 L 88.0 75.0 L 90.0 75.1 L 92.0 75.1 L 94.0 75.1 L 96.0 75.2 L 98.0 75.2 L 100.0 75.3 L 102.0 75.4 L 104.0 75.5 L 106.0 75.7 L 108.0 75.9 L 110.0 76.2 L 112.0 76.5 L 114.0 76.9 L 116.0 77.3 L 118.0 77.9 L 120.0 78.5 L 122.0 78.9 L 124.0 77.1 L 126.0 65.2 L 128.0 39.1 L 130.0 23.3 L 132.0 41.6 L 134.0 70.2 L 136.0 84.6 L 138.0 88.9 L 140.0 90.8 L 142.0 92.5 L 144.0 94.2 L 146.0 95.9 L 148.0 97.6 L 150.0 99.1 L 152.0 100.6 L 154.0 101.8 L 156.0 102.9 L 158.0 103.8 L 160.0 104.5 L 162.0 104.9 L 164.0 105.0 L 166.0 104.9 L 168.0 104.5 L 170.0 103.8 L 172.0 102.9 L 174.0 101.8 L 176.0 100.6 L 178.0 99.1 L 180.0 97.6 L 182.0 95.9 L 184.0 94.2 L 186.0 92.5 L 188.0 90.8 L 190.0 89.2 L 192.0 87.6 L 194.0 86.0 L 196.0 84.6 L 198.0 83.3 L 200.0 82.1 L 202.0 81.0 L 204.0 80.1 L 206.0 79.2 L 208.0 78.5 L 210.0 77.9 L 212.0 77.3 L 214.0 76.9 L 216.0 76.5 L 218.0 76.2 L 220.0 75.9 L 222.0 75.7 L 224.0 75.5 L 226.0 75.4 L 228.0 75.3 L 230.0 75.2 L 232.0 75.2 L 234.0 75.1 L 236.0 75.1 L 238.0 75.1 L 240.0 75.0 L 242.0 75.0 L 244.0 75.0 L 246.0 75.0 L 248.0 75.0 L 250.0 75.0 L 252.0 75.0 L 254.0 75.0 L 256.0 75.0 L 258.0 75.0 L 260.0 75.0 L 262.0 75.0 L 264.0 75.0 L 266.0 75.0 L 268.0 75.0 L 270.0 75.0 L 272.0 75.0 L 274.0 75.0 L 276.0 75.0 L 278.0 75.0 L 280.0 75.0 L 282.0 75.0 L 284.0 75.0 L 286.0 75.0 L 288.0 75.0 L 290.0 75.1 L 292.0 75.1 L 294.0 75.1 L 296.0 75.2 L 298.0 75.2 L 300.0 75.3 L 302.0 75.4 L 304.0 75.5 L 306.0 75.7 L 308.0 75.9 L 310.0 76.2 L 312.0 76.5 L 314.0 76.9 L 316.0 77.3 L 318.0 77.9 L 320.0 78.5 L 322.0 78.9 L 324.0 77.1 L 326.0 65.2 L 328.0 39.1 L 330.0 23.3 L 332.0 41.6 L 334.0 70.2 L 336.0 84.6 L 338.0 88.9 L 340.0 90.8 L 342.0 92.5 L 344.0 94.2 L 346.0 95.9 L 348.0 97.6 L 350.0 99.1 L 352.0 100.6 L 354.0 101.8 L 356.0 102.9 L 358.0 103.8 L 360.0 104.5 L 362.0 104.9 L 364.0 105.0 L 366.0 104.9 L 368.0 104.5 L 370.0 103.8 L 372.0 102.9 L 374.0 101.8 L 376.0 100.6 L 378.0 99.1 L 380.0 97.6 L 382.0 95.9 L 384.0 94.2 L 386.0 92.5 L 388.0 90.8 L 390.0 89.2 L 392.0 87.6 L 394.0 86.0 L 396.0 84.6 L 398.0 83.3 L 400.0 82.1 L 402.0 81.0 L 404.0 80.1 L 406.0 79.2 L 408.0 78.5 L 410.0 77.9 L 412.0 77.3 L 414.0 76.9 L 416.0 76.5 L 418.0 76.2 L 420.0 75.9 L 422.0 75.7 L 424.0 75.5 L 426.0 75.4 L 428.0 75.3 L 430.0 75.2 L 432.0 75.2 L 434.0 75.1 L 436.0 75.1 L 438.0 75.1 L 440.0 75.0 L 442.0 75.0 L 444.0 75.0 L 446.0 75.0 L 448.0 75.0 L 450.0 75.0 L 452.0 75.0 L 454.0 75.0 L 456.0 75.0 L 458.0 75.0 L 460.0 75.0 L 462.0 75.0 L 464.0 75.0 L 466.0 75.0 L 468.0 75.0 L 470.0 75.0 L 472.0 75.0 L 474.0 75.0 L 476.0 75.0 L 478.0 75.0 L 480.0 75.0 L 482.0 75.0 L 484.0 75.0 L 486.0 75.0 L 488.0 75.0 L 490.0 75.1 L 492.0 75.1 L 494.0 75.1 L 496.0 75.2 L 498.0 75.2 L 500.0 75.3 L 502.0 75.4 L 504.0 75.5 L 506.0 75.7 L 508.0 75.9 L 510.0 76.2 L 512.0 76.5 L 514.0 76.9 L 516.0 77.3 L 518.0 77.9 L 520.0 78.5 L 522.0 78.9 L 524.0 77.1 L 526.0 65.2 L 528.0 39.1 L 530.0 23.3 L 532.0 41.6 L 534.0 70.2 L 536.0 84.6 L 538.0 88.9 L 540.0 90.8 L 542.0 92.5 L 544.0 94.2 L 546.0 95.9 L 548.0 97.6 L 550.0 99.1 L 552.0 100.6 L 554.0 101.8 L 556.0 102.9 L 558.0 103.8 L 560.0 104.5 L 562.0 104.9 L 564.0 105.0 L 566.0 104.9 L 568.0 104.5 L 570.0 103.8 L 572.0 102.9 L 574.0 101.8 L 576.0 100.6 L 578.0 99.1 L 580.0 97.6 L 582.0 95.9 L 584.0 94.2 L 586.0 92.5 L 588.0 90.8 L 590.0 89.2 L 592.0 87.6 L 594.0 86.0 L 596.0 84.6 L 598.0 83.3 L 600.0 82.1 L 602.0 81.0 L 604.0 80.1 L 606.0 79.2 L 608.0 78.5 L 610.0 77.9 L 612.0 77.3 L 614.0 76.9 L 616.0 76.5 L 618.0 76.2 L 620.0 75.9 L 622.0 75.7 L 624.0 75.5 L 626.0 75.4 L 628.0 75.3 L 630.0 75.2 L 632.0 75.2 L 634.0 75.1 L 636.0 75.1 L 638.0 75.1 L 640.0 75.0 L 642.0 75.0 L 644.0 75.0 L 646.0 75.0 L 648.0 75.0 L 650.0 75.0 L 652.0 75.0 L 654.0 75.0 L 656.0 75.0 L 658.0 75.0 L 660.0 75.0 L 662.0 75.0 L 664.0 75.0 L 666.0 75.0 L 668.0 75.0 L 670.0 75.0" fill="none" stroke="#e8542f" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>
+      <text x="8" y="18" fill="#7fb5a5" font-family="monospace" font-size="12">spike-and-wave</text>
+    </svg>`, q:`This epileptiform discharge is a:`, opts:[`Spike-and-wave`,`Delta rhythm`,`Sleep spindle`,`Burst suppression`], a:0, ex:`A sharp spike followed by a slow wave.`},
+      {svg:`<svg viewBox="0 0 680 150" xmlns="http://www.w3.org/2000/svg">
+      <rect x="0" y="0" width="680" height="150" fill="none"/>
+      <line x1="0" y1="75" x2="680" y2="75" stroke="#22384f" stroke-width="1"/>
+      <path d="M 10 75 L 12.5 61.8 L 15.0 50.6 L 17.5 43.3 L 20.0 41.0 L 22.5 44.1 L 25.0 52.0 L 27.5 63.6 L 30.0 77.0 L 32.5 90.0 L 35.0 100.7 L 37.5 107.4 L 40.0 108.9 L 42.5 105.0 L 45.0 96.5 L 47.5 84.5 L 50.0 71.0 L 52.5 58.2 L 55.0 48.0 L 57.5 42.1 L 60.0 41.4 L 62.5 45.9 L 65.0 55.1 L 67.5 67.4 L 70.0 80.9 L 72.5 93.5 L 75.0 103.1 L 77.5 108.4 L 80.0 108.3 L 82.5 103.0 L 85.0 93.2 L 87.5 80.6 L 90.0 67.1 L 92.5 54.9 L 95.0 45.8 L 97.5 41.3 L 100.0 42.2 L 102.5 48.2 L 105.0 58.5 L 107.5 71.3 L 110.0 84.8 L 112.5 96.7 L 115.0 105.2 L 117.5 108.9 L 120.0 87.0 L 122.5 78.5 L 125.0 65.2 L 127.5 65.3 L 130.0 78.7 L 132.5 87.0 L 135.0 78.9 L 137.5 65.5 L 140.0 65.1 L 142.5 78.3 L 145.0 87.0 L 147.5 79.3 L 150.0 65.7 L 152.5 64.9 L 155.0 77.9 L 157.5 87.0 L 160.0 79.7 L 162.5 66.0 L 165.0 64.7 L 167.5 77.5 L 170.0 86.9 L 172.5 80.0 L 175.0 66.2 L 177.5 64.5 L 180.0 77.1 L 182.5 86.9 L 185.0 80.4 L 187.5 66.5 L 190.0 64.3 L 192.5 76.7 L 195.0 86.8 L 197.5 80.7 L 200.0 66.8 L 202.5 64.1 L 205.0 76.3 L 207.5 86.7 L 210.0 81.1 L 212.5 67.1 L 215.0 63.9 L 217.5 75.9 L 220.0 86.6 L 222.5 81.4 L 225.0 67.4 L 227.5 63.8 L 230.0 95.4 L 232.5 104.4 L 235.0 108.7 L 237.5 107.8 L 240.0 101.6 L 242.5 91.3 L 245.0 78.4 L 247.5 64.9 L 250.0 53.1 L 252.5 44.7 L 255.0 41.1 L 257.5 42.8 L 260.0 49.7 L 262.5 60.5 L 265.0 73.6 L 267.5 87.0 L 270.0 98.4 L 272.5 106.2 L 275.0 109.0 L 277.5 106.5 L 280.0 99.0 L 282.5 87.7 L 285.0 74.4 L 287.5 61.2 L 290.0 50.2 L 292.5 43.1 L 295.0 41.0 L 297.5 44.3 L 300.0 52.5 L 302.5 64.2 L 305.0 77.6 L 307.5 90.6 L 310.0 101.1 L 312.5 107.5 L 315.0 108.8 L 317.5 104.8 L 320.0 96.0 L 322.5 83.9 L 325.0 70.4 L 327.5 57.7 L 330.0 47.7 L 332.5 41.9 L 335.0 41.5 L 337.5 46.3 L 340.0 63.0 L 342.5 72.0 L 345.0 85.1 L 347.5 84.4 L 350.0 70.8 L 352.5 63.0 L 355.0 71.6 L 357.5 84.8 L 360.0 84.6 L 362.5 71.2 L 365.0 63.0 L 367.5 71.2 L 370.0 84.6 L 372.5 84.8 L 375.0 71.6 L 377.5 63.0 L 380.0 70.8 L 382.5 84.4 L 385.0 85.1 L 387.5 72.0 L 390.0 63.0 L 392.5 70.5 L 395.0 84.1 L 397.5 85.3 L 400.0 72.4 L 402.5 63.1 L 405.0 70.1 L 407.5 83.9 L 410.0 85.5 L 412.5 72.8 L 415.0 63.1 L 417.5 69.7 L 420.0 83.6 L 422.5 85.7 L 425.0 73.1 L 427.5 63.2 L 430.0 69.4 L 432.5 83.3 L 435.0 85.8 L 437.5 73.5 L 440.0 63.2 L 442.5 69.0 L 445.0 83.0 L 447.5 86.0 L 450.0 42.4 L 452.5 41.2 L 455.0 45.4 L 457.5 54.2 L 460.0 66.4 L 462.5 79.9 L 465.0 92.6 L 467.5 102.5 L 470.0 108.1 L 472.5 108.5 L 475.0 103.6 L 477.5 94.1 L 480.0 81.7 L 482.5 68.2 L 485.0 55.8 L 487.5 46.4 L 490.0 41.5 L 492.5 41.9 L 495.0 47.5 L 497.5 57.5 L 500.0 70.3 L 502.5 83.7 L 505.0 95.9 L 507.5 104.7 L 510.0 108.8 L 512.5 107.6 L 515.0 101.2 L 517.5 90.7 L 520.0 77.8 L 522.5 64.4 L 525.0 52.6 L 527.5 44.4 L 530.0 41.0 L 532.5 43.0 L 535.0 50.1 L 537.5 61.0 L 540.0 74.2 L 542.5 87.5 L 545.0 98.8 L 547.5 106.4 L 550.0 109.0 L 552.5 106.2 L 555.0 98.5 L 557.5 87.1 L 560.0 86.9 L 562.5 77.5 L 565.0 64.7 L 567.5 66.0 L 570.0 79.7 L 572.5 87.0 L 575.0 77.9 L 577.5 64.9 L 580.0 65.7 L 582.5 79.3 L 585.0 87.0 L 587.5 78.3 L 590.0 65.1 L 592.5 65.5 L 595.0 78.9 L 597.5 87.0 L 600.0 78.7 L 602.5 65.3 L 605.0 65.2 L 607.5 78.5 L 610.0 87.0 L 612.5 79.0 L 615.0 65.5 L 617.5 65.0 L 620.0 78.1 L 622.5 87.0 L 625.0 79.4 L 627.5 65.8 L 630.0 64.8 L 632.5 77.8 L 635.0 87.0 L 637.5 79.8 L 640.0 66.1 L 642.5 64.6 L 645.0 77.4 L 647.5 86.9 L 650.0 80.1 L 652.5 66.3 L 655.0 64.4 L 657.5 77.0 L 660.0 86.9 L 662.5 80.5 L 665.0 66.6 L 667.5 64.2 L 670.0 106.9" fill="none" stroke="#e8542f" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>
+      <text x="8" y="18" fill="#7fb5a5" font-family="monospace" font-size="12">alternating</text>
+    </svg>`, q:`A term neonate in quiet sleep shows this pattern, called:`, opts:[`Tracé alternant`,`Alpha rhythm`,`Burst suppression from anesthesia`,`Isoelectric line`], a:0, ex:`Tracé alternant — the alternating quiet-sleep pattern at term.`},
+      {svg:`<svg viewBox="0 0 680 150" xmlns="http://www.w3.org/2000/svg">
+      <rect x="0" y="0" width="680" height="150" fill="none"/>
+      <line x1="0" y1="75" x2="680" y2="75" stroke="#22384f" stroke-width="1"/>
+      <path d="M 10 75 L 13.0 47.1 L 16.0 54.3 L 19.0 87.5 L 22.0 105.0 L 25.0 84.7 L 28.0 52.3 L 31.0 48.4 L 34.0 78.0 L 37.0 103.8 L 40.0 93.4 L 43.0 59.9 L 46.0 45.3 L 49.0 68.1 L 52.0 99.6 L 55.0 100.1 L 58.0 69.1 L 61.0 45.5 L 64.0 59.0 L 67.0 92.6 L 70.0 104.1 L 73.0 79.0 L 76.0 48.9 L 79.0 51.6 L 82.0 83.8 L 85.0 104.9 L 88.0 88.4 L 91.0 55.0 L 94.0 46.8 L 97.0 74.0 L 100.0 102.5 L 103.0 96.4 L 106.0 63.4 L 109.0 45.0 L 112.0 64.3 L 115.0 97.1 L 118.0 102.1 L 121.0 73.0 L 124.0 46.5 L 127.0 55.8 L 130.0 89.3 L 133.0 104.8 L 136.0 82.8 L 139.0 51.0 L 142.0 49.4 L 145.0 79.9 L 148.0 104.3 L 151.0 91.8 L 154.0 58.2 L 157.0 45.7 L 160.0 70.1 L 163.0 100.6 L 166.0 99.0 L 169.0 67.2 L 172.0 45.2 L 175.0 60.7 L 178.0 94.2 L 181.0 103.5 L 184.0 77.0 L 187.0 47.9 L 190.0 52.9 L 193.0 85.7 L 196.0 105.0 L 199.0 86.6 L 202.0 53.6 L 205.0 47.5 L 208.0 76.0 L 211.0 103.2 L 214.0 95.0 L 217.0 61.6 L 220.0 45.1 L 223.0 66.2 L 226.0 98.4 L 229.0 101.1 L 232.0 71.0 L 235.0 45.9 L 238.0 57.4 L 241.0 91.0 L 244.0 104.5 L 247.0 80.9 L 250.0 49.9 L 253.0 50.4 L 256.0 81.9 L 259.0 104.7 L 262.0 90.1 L 265.0 56.6 L 268.0 46.2 L 271.0 72.0 L 274.0 101.6 L 277.0 97.7 L 280.0 65.3 L 283.0 45.0 L 286.0 62.5 L 289.0 95.7 L 292.0 102.9 L 295.0 75.0 L 298.0 47.1 L 301.0 54.3 L 304.0 87.5 L 307.0 105.0 L 310.0 84.7 L 313.0 52.3 L 316.0 48.4 L 319.0 78.0 L 322.0 103.8 L 325.0 93.4 L 328.0 59.9 L 331.0 45.3 L 334.0 68.1 L 337.0 99.6 L 340.0 100.1 L 343.0 69.1 L 346.0 45.5 L 349.0 59.0 L 352.0 92.6 L 355.0 104.1 L 358.0 79.0 L 361.0 48.9 L 364.0 51.6 L 367.0 83.8 L 370.0 104.9 L 373.0 88.4 L 376.0 55.0 L 379.0 46.8 L 382.0 74.0 L 385.0 102.5 L 388.0 96.4 L 391.0 63.4 L 394.0 45.0 L 397.0 64.3 L 400.0 97.1 L 403.0 102.1 L 406.0 73.0 L 409.0 46.5 L 412.0 55.8 L 415.0 89.3 L 418.0 104.8 L 421.0 82.8 L 424.0 51.0 L 427.0 49.4 L 430.0 79.9 L 433.0 104.3 L 436.0 91.8 L 439.0 58.2 L 442.0 45.7 L 445.0 70.1 L 448.0 100.6 L 451.0 99.0 L 454.0 67.2 L 457.0 45.2 L 460.0 60.7 L 463.0 94.2 L 466.0 103.5 L 469.0 77.0 L 472.0 47.9 L 475.0 52.9 L 478.0 85.7 L 481.0 105.0 L 484.0 86.6 L 487.0 53.6 L 490.0 47.5 L 493.0 76.0 L 496.0 103.2 L 499.0 95.0 L 502.0 61.6 L 505.0 45.1 L 508.0 66.2 L 511.0 98.4 L 514.0 101.1 L 517.0 71.0 L 520.0 45.9 L 523.0 57.4 L 526.0 91.0 L 529.0 104.5 L 532.0 80.9 L 535.0 49.9 L 538.0 50.4 L 541.0 81.9 L 544.0 104.7 L 547.0 90.1 L 550.0 56.6 L 553.0 46.2 L 556.0 72.0 L 559.0 101.6 L 562.0 97.7 L 565.0 65.3 L 568.0 45.0 L 571.0 62.5 L 574.0 95.7 L 577.0 102.9 L 580.0 75.0 L 583.0 47.1 L 586.0 54.3 L 589.0 87.5 L 592.0 105.0 L 595.0 84.7 L 598.0 52.3 L 601.0 48.4 L 604.0 78.0 L 607.0 103.8 L 610.0 93.4 L 613.0 59.9 L 616.0 45.3 L 619.0 68.1 L 622.0 99.6 L 625.0 100.1 L 628.0 69.1 L 631.0 45.5 L 634.0 59.0 L 637.0 92.6 L 640.0 104.1 L 643.0 79.0 L 646.0 48.9 L 649.0 51.6 L 652.0 83.8 L 655.0 104.9 L 658.0 88.4 L 661.0 55.0 L 664.0 46.8 L 667.0 74.0 L 670.0 102.5" fill="none" stroke="#e8542f" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>
+      
+    </svg>`, q:`The rhythm shown is:`, opts:[`Theta (4–8 Hz) — drowsy/light sleep`,`Beta — alert`,`Alpha — relaxed`,`Delta — deep sleep`], a:0, ex:`Between alpha and delta = theta.`}
     ],
     cheat:[
       {h:"Frequency bands (fast → slow)", headers:["Band","Look / state"], rows:[
@@ -1065,27 +1155,397 @@ const TOPICS = [
     ]
   }
 
+  ,{
+    id:"aseptic",
+    title:"Aseptic Technique",
+    sub:"Principles of the sterile field",
+    source:"“Points to Remember about Aseptic Technique,” NDT 204 course handout.",
+    cards:[
+      ["Field","What is the center of the sterile field?","The <span class='hl'>patient</span>."],
+      ["Field","What items may be used within the sterile field?","<span class='hl'>Only sterile items</span> — verified by wrapping, label, and storage."],
+      ["Gowning","At what level are sterile persons' hands kept?","At <span class='hl'>waist level and in sight</span> at all times — away from the face, never folded under the arms."],
+      ["Gowning","Which parts of a gown are considered sterile?","The <span class='hl'>front from chest to sterile-field level</span>, and sleeves from <span class='hl'>above the elbow to the cuffs</span>."],
+      ["Tables","Draped tables are sterile at what level?","<span class='hl'>Table level only</span> — anything below the edge is unsterile."],
+      ["Contact","Sterile persons touch only ___; unsterile persons touch only ___.","Sterile persons touch only <span class='hl'>sterile</span> items/areas; unsterile persons touch only <span class='hl'>unsterile</span> items/areas."],
+      ["Reaching","Rule about reaching/leaning over fields?","<span class='hl'>Unsterile persons don't reach over</span> a sterile field; <span class='hl'>sterile persons don't lean over</span> an unsterile area."],
+      ["Edges","How are the edges of anything enclosing sterile contents treated?","As <span class='hl'>unsterile</span> — a wrapper is sterile only to within <span class='hl'>one inch</span> of its edge."],
+      ["Timing","When is a sterile field created?","As <span class='hl'>close as possible to the time of use</span>; covering sterile tables is not recommended."],
+      ["Observation","What happens to an unobserved sterile field?","An <span class='hl'>unguarded sterile field is considered contaminated</span> — sterility can't be ensured without direct view."],
+      ["Movement","How do sterile persons pass one another?","<span class='hl'>Back to back or front to front</span>, always facing the sterile area, with minimal movement."],
+      ["Distance","How far must unsterile persons stay from the sterile field?","At least <span class='hl'>1 foot (12 inches)</span>; never walk between two sterile fields."],
+      ["Barrier","What is 'strike-through'?","<span class='hl'>Soaking through</span> of a barrier from sterile to non-sterile (or vice versa) — it causes contamination. Sterility is <span class='hl'>event-related</span>."],
+      ["Micro","Can all microorganisms be eliminated?","<span class='hl'>No</span> — perfect asepsis is an ideal; skin can't be sterilized and air carries droplets, so the goal is an <span class='hl'>irreducible minimum</span>."]
+    ],
+    quiz:[
+      {q:"The center of the sterile field is:",opts:["The patient","The surgeon","The scrub table","The circulator"],a:0,ex:"The patient is the center of the sterile field."},
+      {q:"Draped tables are considered sterile:",opts:["At table level only","Including the sides","Only in the center","Everywhere above the floor"],a:0,ex:"Only at table level — below the edge is unsterile."},
+      {q:"An unsterile person must maintain a distance from the sterile field of at least:",opts:["1 foot (12 inches)","1 inch","3 feet","6 inches"],a:0,ex:"At least 1 foot / 12 inches."},
+      {q:"The edges of a wrapper enclosing sterile contents are:",opts:["Unsterile (sterile only to within 1 inch)","Fully sterile","Sterile only at the corners","Sterile if unopened"],a:0,ex:"Edges are unsterile; a wrapper is sterile to within one inch."},
+      {q:"A gown is considered sterile:",opts:["In front from chest to sterile-field level, sleeves above the elbow to cuffs","Everywhere including the back","Only on the sleeves","Only below the waist"],a:0,ex:"Front chest-to-field level and sleeves above the elbow to cuffs."},
+      {q:"An unobserved sterile field should be considered:",opts:["Contaminated","Still sterile for 1 hour","Sterile if covered","Sterile until touched"],a:0,ex:"An unguarded field is considered contaminated."},
+      {q:"Sterile persons pass one another:",opts:["Back to back or front to front","Face to back","At least 3 feet apart","Only through the circulator"],a:0,ex:"Back to back or front to front, facing the sterile area."},
+      {q:"'Strike-through' refers to:",opts:["A barrier soaking through from sterile to non-sterile (or vice versa)","Dropping a sterile item","Reaching over the field","Opening a package toward yourself"],a:0,ex:"Strike-through soaks a barrier and causes contamination."},
+      {q:"Regarding microorganisms in the OR, the principle is that:",opts:["They must be kept to an irreducible minimum","They can be completely eliminated","Skin can be fully sterilized","Air is always sterile"],a:0,ex:"Perfect asepsis is an ideal; the goal is an irreducible minimum."},
+      {q:"When should the sterile field be created?",opts:["As close as possible to the time of use","The night before","Only after the patient arrives home","Whenever convenient, then covered"],a:0,ex:"As close as possible to use; covering sterile tables is not recommended."}
+    ],
+    cheat:[
+      {h:"The big rules", headers:["Principle","Detail"], rows:[
+        ["Center of sterile field","The patient"],
+        ["Tables sterile at","Table level only"],
+        ["Unsterile-person distance","≥ 1 foot (12 in)"],
+        ["Wrapper edges","Unsterile (sterile to 1 inch in)"],
+        ["Gown sterile zone","Chest→field level; sleeves above elbow→cuff"],
+        ["Unobserved field","Considered contaminated"]]},
+      {h:"Movement & contact", hook:"Sterile touches only <span class='hl'>sterile</span>; unsterile touches only <span class='hl'>unsterile</span>. Unsterile don't reach over; sterile don't lean over. Pass <span class='hl'>back-to-back / front-to-front</span>; never walk between two sterile fields."},
+      {h:"Key terms", hook:"<span class='hl'>Strike-through</span> = barrier soaks through → contamination. Sterility is <span class='hl'>event-related</span>. Perfect asepsis is an <span class='hl'>ideal</span> — keep microbes to an irreducible minimum."}
+    ]
+  }
+
+  ,{
+    id:"primerA",
+    title:"EEG Primer — Part A: Technical Background",
+    sub:"Fisch & Spehlmann, ch. 1–7 (generation, electrodes, instruments, montages, the record, artifacts)",
+    source:"Fisch & Spehlmann's EEG Primer, 3rd ed., Part A. Key terms & questions written from the text (not reproduced verbatim).",
+    cards:[
+      ["Ch1 Generation","What generates the EEG?","Cortical <span class='hl'>postsynaptic potentials (EPSPs & IPSPs)</span> of pyramidal cells that summate and extend to the scalp — NOT action potentials."],
+      ["Ch1 Generation","Why don't action potentials contribute much to the EEG?","They're too <span class='hl'>brief (~1 ms)</span> and have too small a field vs. postsynaptic potentials (15–200+ ms)."],
+      ["Ch1 Generation","What is volume conduction?","Current flow through the tissues (brain, CSF, skull, scalp) between generator and electrode — it <span class='hl'>modifies amplitude & morphology</span> of the signal."],
+      ["Ch1 Generation","What is the resting membrane potential of a neuron?","About <span class='hl'>−65 mV</span> (range −40 to −80), negative inside vs. outside."],
+      ["Ch1 Generation","EPSP vs IPSP?","EPSP = partial <span class='hl'>depolarization</span> (Na⁺ in) → more likely to fire. IPSP = <span class='hl'>hyperpolarization</span> (Cl⁻ in / K⁺ out) → less likely to fire."],
+      ["Ch1 Generation","What is the 'inverse problem'?","Infinitely many source combinations can produce the same scalp EEG, so you <span class='hl'>can't know the exact generator location</span> from scalp EEG alone."],
+      ["Ch1 Generation","Where do rhythmic EEG activities like sleep spindles originate?","A <span class='hl'>thalamocortical</span> interaction — pacemaker cells in the <span class='hl'>nucleus reticularis</span> of the thalamus."],
+      ["Ch2 Electrodes","Recommended electrode impedance range?","Between <span class='hl'>100 and 5000 ohms</span>. Too high → attenuation & 60 Hz artifact; under 100 → likely a short circuit."],
+      ["Ch2 Electrodes","Preferred electrode surface materials?","<span class='hl'>Gold or chlorided silver</span> — materials that don't interact electrically with the scalp."],
+      ["Ch2 Electrodes","What is the standard electrode-placement system?","The <span class='hl'>international 10-20 system</span> (modified 10-20 now preferred) — based on measurements between bony skull landmarks; <span class='hl'>21 electrodes</span>."],
+      ["Ch3 Instruments","What does an EEG differential amplifier amplify?","Only the <span class='hl'>difference</span> between its two input terminals; identical (common) signals cancel to a flat line."],
+      ["Ch3 Instruments","Clinically significant EEG frequency spectrum selected by filters?","About <span class='hl'>0.5–30 Hz</span> (low filter removes slow, high filter removes fast)."],
+      ["Ch3 Instruments","What is the Nyquist theorem, and what is aliasing?","Sampling rate must be at least <span class='hl'>twice the fastest frequency</span>; sampling too slowly misrepresents the signal = <span class='hl'>aliasing</span>."],
+      ["Ch3 Instruments","Standard analog paper speed?","<span class='hl'>30 mm/second</span> (digital display should use at least ~25 mm/s equivalent)."],
+      ["Ch3 Instruments","What is a calibration pulse?","A <span class='hl'>square-wave pulse of known voltage</span> used to check amplifier gain, filters, and penwriter function."],
+      ["Ch4 Montages","What is a derivation vs. a montage?","A <span class='hl'>derivation</span> = the electrode pair feeding one amplifier (inputs 1 & 2). A <span class='hl'>montage</span> = a combination of derivations across channels. Montages act as <span class='hl'>spatial filters</span>."],
+      ["Ch4 Montages","Bipolar vs referential montage — key difference?","<span class='hl'>Bipolar</span> highlights localized activity and uses phase reversal to localize. <span class='hl'>Referential</span> keeps widespread coherent activity (compares each electrode to a common reference)."],
+      ["Ch5 The Record","Typical starting amplifier sensitivity & filter settings?","Sensitivity <span class='hl'>5–10 µV/mm</span>, high-frequency filter ~<span class='hl'>70 Hz</span>; record calibrated at beginning and end."],
+      ["Ch5 The Record","Definition of electrocerebral inactivity (ECI)?","No EEG activity over <span class='hl'>2 µV</span> from scalp pairs ≥10 cm apart, impedances under 10,000 Ω (but over 100 Ω) — used in suspected cerebral death."],
+      ["Ch6 Artifacts","Two broad categories of artifact?","<span class='hl'>Physiological</span> (from the body — movement, muscle, eye, heart, sweat) and <span class='hl'>non-physiological</span> (external interference or equipment malfunction)."],
+      ["Ch6 Artifacts","What causes 60 Hz interference?","External electrical sources (power lines/equipment), often worsened by <span class='hl'>high electrode impedance</span>."],
+      ["Ch7 Special","Name two special/quantitative EEG techniques.","<span class='hl'>Quantitative EEG (QEEG)</span> & topographic mapping, automated event detection, intraoperative/ICU monitoring, ambulatory EEG, and video-EEG."]
+    ],
+    quiz:[
+      {q:"The EEG is primarily generated by:",opts:["Postsynaptic potentials of cortical pyramidal cells","Action potentials of axons","Glial cell metabolism","Skull bone conduction"],a:0,ex:"Summated EPSPs/IPSPs of pyramidal cells — not action potentials."},
+      {q:"Action potentials contribute little to the scalp EEG because they are:",opts:["Too brief and have too small a field","Too slow","Too large","Electrically silent"],a:0,ex:"~1 ms and small field vs. 15–200+ ms postsynaptic potentials."},
+      {q:"The flow of current through brain, CSF, skull, and scalp is called:",opts:["Volume conduction","Aliasing","Polarization","Phase reversal"],a:0,ex:"Volume conduction modifies amplitude and morphology."},
+      {q:"A typical neuronal resting membrane potential is about:",opts:["−65 mV","0 mV","+30 mV","−200 mV"],a:0,ex:"About −65 mV, negative inside."},
+      {q:"An EPSP results from increased permeability chiefly to:",opts:["Sodium","Chloride","Calcium only","Magnesium"],a:0,ex:"Na⁺ influx partially depolarizes the cell."},
+      {q:"The inability to know the exact EEG generator location from scalp data is called the:",opts:["Inverse problem","Forward problem","Nyquist limit","Solid angle theorem"],a:0,ex:"Many sources can produce the same scalp signal — the inverse problem."},
+      {q:"Acceptable EEG electrode impedance is generally:",opts:["100–5000 ohms","Under 10 ohms","10,000–50,000 ohms","Above 1 megohm"],a:0,ex:"100–5000 Ω; too high → 60 Hz artifact."},
+      {q:"The standard electrode-placement system is the:",opts:["International 10-20 system","Queen Square system","Illinois montage","Cz-only system"],a:0,ex:"The international (modified) 10-20 system, 21 electrodes."},
+      {q:"An EEG differential amplifier amplifies:",opts:["The difference between its two inputs","Each input separately","Only input 1","Only the ground"],a:0,ex:"Common signals cancel; only the difference is amplified."},
+      {q:"The clinically significant EEG frequency band selected by filters is about:",opts:["0.5–30 Hz","30–100 Hz","100–500 Hz","0.01–0.1 Hz"],a:0,ex:"Low & high filters isolate ~0.5–30 Hz."},
+      {q:"Aliasing occurs when the sampling rate is:",opts:["Less than twice the fastest frequency","More than the frequency","Exactly the frequency","Irrelevant to frequency"],a:0,ex:"Nyquist: sample ≥ 2× fastest frequency or you get aliasing."},
+      {q:"The combination of the two electrodes feeding one amplifier is a:",opts:["Derivation","Montage","Reference","Channel filter"],a:0,ex:"Derivation = inputs 1 & 2; a montage combines derivations."},
+      {q:"Electrocerebral inactivity (ECI) is defined as no activity over:",opts:["2 µV","20 µV","0.5 µV","50 µV"],a:0,ex:"Under 2 µV from pairs ≥10 cm apart — used in suspected cerebral death."},
+      {q:"Muscle, eye, heart, and sweat signals on the EEG are examples of:",opts:["Physiological artifacts","Non-physiological artifacts","Cerebral activity","Calibration signals"],a:0,ex:"Physiological artifacts arise from the body."},
+      {q:"60 Hz interference is often worsened by:",opts:["High electrode impedance","Low paper speed","Too many channels","A short circuit"],a:0,ex:"High impedance makes electrodes pick up more 60 Hz."}
+    ],
+    cheat:[
+      {h:"Generation (Ch 1)", headers:["Concept","Key point"], rows:[
+        ["EEG source","Pyramidal cell postsynaptic potentials (EPSP/IPSP)"],
+        ["Action potentials","Contribute little (too brief/small)"],
+        ["Resting potential","≈ −65 mV"],
+        ["Volume conduction","Tissue between source & electrode alters signal"],
+        ["Inverse problem","Can't pinpoint source from scalp alone"]]},
+      {h:"Instruments & recording (Ch 2–5)", headers:["Item","Value"], rows:[
+        ["Electrode impedance","100–5000 Ω"],
+        ["Placement system","10-20 system (21 electrodes)"],
+        ["Filter band","~0.5–30 Hz"],
+        ["Paper speed","30 mm/s"],
+        ["Start sensitivity","5–10 µV/mm"],
+        ["ECI threshold","< 2 µV"]]},
+      {h:"Key definitions", hook:"<span class='hl'>Nyquist</span>: sample ≥ 2× fastest frequency or you get <span class='hl'>aliasing</span>. <span class='hl'>Derivation</span> = one amplifier's electrode pair; <span class='hl'>montage</span> = combination of derivations (a spatial filter). Differential amp amplifies only the <span class='hl'>difference</span> between inputs."},
+      {h:"Artifacts (Ch 6)", hook:"<span class='hl'>Physiological</span> = body (muscle, eye, ECG, sweat, movement). <span class='hl'>Non-physiological</span> = external interference or equipment fault. High impedance → more <span class='hl'>60 Hz</span>."}
+    ]
+  }
+
+  ,{
+    id:"pgEPIOM",
+    title:"Practical Guide — EP & IONM (Ch 1–8)",
+    sub:"Principles of EP, VEP, BAEP, SSEP, and IONM (CEA, spinal, brainstem)",
+    source:"Practical Guide for Clinical Neurophysiologic Testing, 2nd ed., ch. 1–8. Key terms & questions written from the text.",
+    cards:[
+      ["Ch1 Principles","Why is signal averaging used for evoked potentials?","EP responses are tiny and buried in noise; averaging <span class='hl'>time-locked</span> responses raises the signal-to-noise ratio while random noise averages out."],
+      ["Ch1 Principles","What happens to signal-to-noise as you average more trials?","It <span class='hl'>improves</span> — the time-locked response stays constant while non-synchronous noise cancels out."],
+      ["Ch1 Principles","Why must a stimulation rate avoid harmonics of 60 Hz?","So 60-Hz line noise doesn't lock in with the average; nonharmonic rates let the 60-Hz artifact <span class='hl'>average out</span>."],
+      ["Ch1 Principles","How is EP waveform nomenclature expressed?","By <span class='hl'>polarity (P/N) and mean latency</span> — e.g., SSEP P14/N20, VEP N75/P100/N145."],
+      ["Ch1 Principles","How does a lower low-frequency filter setting affect P100 latency?","Filter settings shift latency — inappropriate filtering <span class='hl'>distorts latency/amplitude</span>, so settings must be standardized."],
+      ["Ch2 VEP","What is the key VEP waveform and its components?","<span class='hl'>P100</span> — a positive peak ~100 ms, flanked by <span class='hl'>N75 and N145</span>."],
+      ["Ch2 VEP","Which condition is VEP classically used to detect?","<span class='hl'>Optic neuritis / multiple sclerosis</span> — VEP is abnormal in ~60% of MS cases overall; optic-nerve pathology delays/reduces P100."],
+      ["Ch2 VEP","What factors affect P100 latency and must be controlled?","<span class='hl'>Check size, screen size, room illumination</span>, and contrast — so labs standardize their own norms."],
+      ["Ch3 BAEP","Trace the auditory pathway BAEP follows.","Cochlea → cochlear nerve (CN VIII) → cochlear nuclei → <span class='hl'>superior olivary nuclei</span> → lateral lemniscus → <span class='hl'>inferior colliculus</span> → medial geniculate → auditory cortex (Heschl's gyrus)."],
+      ["Ch3 BAEP","What does BAEP wave I represent?","A <span class='hl'>near-field potential</span> from the <span class='hl'>cochlear nerve</span> before it enters the brainstem (not a far-field potential)."],
+      ["Ch3 BAEP","Which BAEP waves are most clinically used, and typical adult latencies?","Waves <span class='hl'>I, III, and V</span> (~1.6, 3.7, 5.7 ms in adults; the I–V interpeak latency is the key measure)."],
+      ["Ch3 BAEP","In an acoustic neuroma, which wave is usually affected first?","<span class='hl'>Wave I</span> (or I–III interpeak) — the lesion is at the acoustic (cochlear) nerve."],
+      ["Ch3 BAEP","Are BAEPs a far-field or near-field recording (waves II–V)?","<span class='hl'>Far-field potentials (FFPs)</span> — the scalp electrode views brainstem events from a distance, 'as if through a telescope.'"],
+      ["Ch4 SSEP","Name the key SSEP components for an upper-limb (median) study.","<span class='hl'>Erb's point potential, P14 (subcortical), and N20 (cortical)</span>."],
+      ["Ch4 SSEP","Which SSEP component is cortical and most anesthesia-sensitive?","<span class='hl'>N20</span> (the cortical response) — subcortical components (like P14) are more resistant."],
+      ["Ch5 IONM role","What is the technologist's core role in IONM?","<span class='hl'>Set up and run monitoring, obtain reliable baselines, recognize changes, and communicate immediately</span> with the surgical/anesthesia team; document events."],
+      ["Ch6 CEA","During carotid endarterectomy, what EEG change signals ischemia after cross-clamping?","<span class='hl'>Attenuation/suppression and slowing</span> on the clamped (ipsilateral) side — a warning that flow is inadequate."],
+      ["Ch6 CEA","What intervention can restore flow if the EEG signals ischemia during cross-clamp?","Placing a <span class='hl'>shunt</span> — EEG typically improves within ~1–2 minutes of shunt placement if ischemia was the cause."],
+      ["Ch7 Spinal","Which modalities are combined for spinal cord monitoring?","<span class='hl'>SSEPs (dorsal/sensory columns) + MEPs (motor tracts)</span>, since SSEP alone can miss anterior (motor) cord injury."],
+      ["Ch7 Spinal","What is the older non-electrical check of spinal cord function during surgery?","The <span class='hl'>wake-up (Stagnara) test</span> — waking the patient intraoperatively to move the legs."],
+      ["Ch8 Brainstem","Why is cranial-nerve/brainstem IONM used in posterior fossa surgery?","To protect <span class='hl'>cranial nerves and brainstem pathways</span> (e.g., facial nerve EMG, BAEP) during acoustic-neuroma and brainstem procedures."]
+    ],
+    quiz:[
+      {q:"Signal averaging improves evoked potentials by:",opts:["Raising the signal-to-noise ratio (time-locked response stays, noise averages out)","Amplifying all signals equally","Removing the need for filters","Increasing stimulus intensity"],a:0,ex:"Time-locked responses persist; random noise cancels."},
+      {q:"Evoked potential waveforms are named by:",opts:["Polarity and mean latency (e.g., N20, P100)","Amplitude only","Electrode color","Stimulus intensity"],a:0,ex:"P/N polarity + latency in ms."},
+      {q:"The key waveform of the visual evoked potential is the:",opts:["P100","N20","Wave V","Erb's point potential"],a:0,ex:"P100 — positive ~100 ms, flanked by N75 and N145."},
+      {q:"VEP is classically abnormal in:",opts:["Optic neuritis / multiple sclerosis","Carpal tunnel syndrome","ALS","Myasthenia gravis"],a:0,ex:"Optic-nerve demyelination delays/reduces P100."},
+      {q:"BAEP wave I is generated by the:",opts:["Cochlear nerve (near-field, before the brainstem)","Inferior colliculus","Auditory cortex","Superior olivary nucleus"],a:0,ex:"Wave I is a near-field potential from the cochlear nerve."},
+      {q:"The BAEP waves most used clinically are:",opts:["I, III, and V","II and IV only","VI and VII","All seven equally"],a:0,ex:"Waves I, III, V and the I–V interpeak latency."},
+      {q:"In an acoustic neuroma, the earliest-affected BAEP finding is usually:",opts:["Wave I (or I–III interpeak)","Wave V amplitude increase","P100 delay","N20 loss"],a:0,ex:"The lesion is at the acoustic (cochlear) nerve → wave I."},
+      {q:"Waves II–V of the BAEP are recorded as:",opts:["Far-field potentials","Near-field potentials","Cortical potentials","Muscle potentials"],a:0,ex:"FFPs — the scalp views brainstem events from a distance."},
+      {q:"The cortical SSEP component in a median-nerve study is:",opts:["N20","P14","Erb's point potential","Wave III"],a:0,ex:"N20 is cortical and the most anesthesia-sensitive."},
+      {q:"Subcortical SSEP components (e.g., P14) compared with cortical components are:",opts:["More resistant to anesthesia","More sensitive to anesthesia","Not recordable","Identical in sensitivity"],a:0,ex:"Subcortical/peripheral parts resist anesthesia; cortical N20 is sensitive."},
+      {q:"After carotid cross-clamping, EEG ischemia appears as:",opts:["Attenuation/suppression and slowing on the clamped side","Increased fast activity","A spike-and-wave burst","No change ever"],a:0,ex:"Ipsilateral attenuation/slowing warns of inadequate flow."},
+      {q:"If the EEG signals ischemia during carotid cross-clamp, the surgeon may:",opts:["Place a shunt to restore flow","Increase the anesthetic","Remove all electrodes","Stop monitoring"],a:0,ex:"A shunt reroutes blood; EEG usually improves within 1–2 min."},
+      {q:"Spinal cord monitoring combines SSEPs with MEPs because:",opts:["SSEP alone can miss anterior (motor) cord injury","MEPs are easier to record","SSEPs are unreliable","MEPs replace the wake-up test entirely"],a:0,ex:"SSEP = sensory columns; MEP = motor tracts — both are needed."},
+      {q:"The older intraoperative check of motor function is the:",opts:["Wake-up (Stagnara) test","Valsalva maneuver","Romberg test","Tensilon test"],a:0,ex:"The patient is briefly awakened to move the legs."},
+      {q:"Brainstem/cranial-nerve IONM is especially used in:",opts:["Posterior fossa / acoustic neuroma surgery","Carpal tunnel release","Cataract surgery","Knee arthroscopy"],a:0,ex:"To protect cranial nerves & brainstem pathways (facial EMG, BAEP)."}
+    ],
+    cheat:[
+      {h:"Evoked potential essentials", headers:["EP","Key waveform / point"], rows:[
+        ["Principle","Averaging raises signal-to-noise (time-locked)"],
+        ["VEP","P100 (with N75, N145) — MS/optic neuritis"],
+        ["BAEP","Waves I, III, V; I–V interpeak"],
+        ["SSEP (median)","Erb's, P14 (subcortical), N20 (cortical)"]]},
+      {h:"BAEP auditory pathway", hook:"Cochlea → cochlear nerve (CN VIII) → cochlear nuclei → <span class='hl'>superior olive</span> → lateral lemniscus → <span class='hl'>inferior colliculus</span> → medial geniculate → auditory cortex. Wave I = cochlear nerve (near-field); II–V = far-field."},
+      {h:"IONM applications", headers:["Surgery","Monitoring"], rows:[
+        ["Carotid endarterectomy","EEG — ipsilateral attenuation/slowing → shunt"],
+        ["Spinal cord","SSEP + MEP (sensory + motor)"],
+        ["Posterior fossa / acoustic neuroma","BAEP + cranial-nerve EMG"]],
+        hook:"Cortical N20 is anesthesia-sensitive; subcortical P14 is resistant. Older motor check = <span class='hl'>wake-up (Stagnara) test</span>."}
+    ]
+  }
+
+  ,{
+    id:"primerB",
+    title:"EEG Primer — Part B: The Normal EEG",
+    sub:"Fisch & Spehlmann, ch. 10–14 (maturation, wakeful adult, sleep, elderly, activation)",
+    source:"Fisch & Spehlmann's EEG Primer, 3rd ed., Part B. Key terms & questions written from the text.",
+    cards:[
+      ["Ch10 Maturation","When do the most dramatic EEG maturational changes occur?","Between <span class='hl'>early premature age and the first 3 months</span> of life."],
+      ["Ch10 Maturation","What is conceptional age (CA)?","<span class='hl'>Gestational age + legal age (time since birth)</span> — the infant's actual physiological age; drives EEG patterns in the first 6 months."],
+      ["Ch10 Maturation","Name the 4 basic neonatal EEG patterns at term (~40 wks).","<span class='hl'>Low-voltage irregular (LVI)</span>, <span class='hl'>mixed voltage (MV)</span>, <span class='hl'>high-voltage slow (HVS)</span>, and <span class='hl'>tracé alternant (TA)</span>."],
+      ["Ch10 Maturation","Which neonatal patterns appear in quiet sleep?","<span class='hl'>High-voltage slow (HVS)</span> and <span class='hl'>tracé alternant (TA)</span>."],
+      ["Ch11 Wakeful adult","Define the alpha rhythm.","Sinusoidal <span class='hl'>8–13 Hz</span> activity, maximal <span class='hl'>posteriorly</span>, present with eyes closed and <span class='hl'>blocked by eye opening</span>."],
+      ["Ch11 Wakeful adult","What alpha frequency is considered abnormal in an awake adult?","An alpha rhythm that <span class='hl'>never exceeds 8.0 Hz</span> — normal adult alpha is >8.0 Hz."],
+      ["Ch11 Wakeful adult","Alpha is defined by which three features?","Its <span class='hl'>frequency, distribution, and reactivity</span> — 'alpha rhythm' and 'alpha frequency' are not synonymous."],
+      ["Ch11 Wakeful adult","What is the squeak phenomenon?","A brief <span class='hl'>increase in alpha frequency right after eye closure</span>, then a return to baseline."],
+      ["Ch11 Wakeful adult","What is the mu rhythm?","A central rhythm that <span class='hl'>persists with eye opening</span> (unlike alpha) and is blocked by movement of the contralateral limb."],
+      ["Ch11 Wakeful adult","Where do beta rhythms (>13 Hz) predominate?","Frontal/central regions; less common than alpha and can be widely distributed."],
+      ["Ch12 Sleep","Name the key elements of the normal sleep EEG.","<span class='hl'>Sleep spindles, K complexes, vertex sharp waves, POSTs, delta activity, and sawtooth waves</span>."],
+      ["Ch12 Sleep","How are sleep stages scored?","By monitoring <span class='hl'>EEG, eye movements, and submental (chin) muscle tone</span> (full PSG adds ECG, respiration, limb EMG, airflow)."],
+      ["Ch12 Sleep","When does REM sleep normally first begin?","<span class='hl'>90–120 minutes</span> after sleep onset. REM at onset (within 20 min) is abnormal ('sleep-onset REM')."],
+      ["Ch12 Sleep","Which sleep predominates in the first vs last third of the night?","<span class='hl'>Slow-wave (delta) sleep</span> in the first two-thirds; <span class='hl'>REM</span> in the last two-thirds."],
+      ["Ch12 Sleep","Slow-wave sleep is associated with secretion of what?","<span class='hl'>Growth hormone</span>."],
+      ["Ch12 Sleep","What test detects sleep-onset REM in suspected narcolepsy?","The <span class='hl'>Multiple Sleep Latency Test (MSLT)</span>."],
+      ["Ch13 Elderly","How does the alpha rhythm change over age 60?","It may be <span class='hl'>slower, less persistent, and less reactive</span>; beta often more prominent."],
+      ["Ch13 Elderly","What alpha frequencies can be normal in the elderly?","6–7 Hz may be acceptable in some over 70; but an alpha of <span class='hl'>≤8.0 Hz is generally still considered borderline/abnormal</span> in younger adults."],
+      ["Ch14 Activation","What is the normal response to hyperventilation?","A <span class='hl'>buildup of generalized slow waves</span> — more prominent in the young; it can bring out spike-and-wave, spikes, or focal slowing."],
+      ["Ch14 Activation","What are the three routine activation procedures?","<span class='hl'>Hyperventilation, photic stimulation, and sleep (incl. sleep deprivation)</span>."],
+      ["Ch14 Activation","Photic stimulation: normal vs abnormal responses?","<span class='hl'>Photic driving</span> (time-locked to flashes) is normal; a <span class='hl'>photoparoxysmal/photoconvulsive</span> response is abnormal."]
+    ],
+    quiz:[
+      {q:"The most dramatic EEG maturational changes occur:",opts:["Between early prematurity and the first 3 months","At age 5","During adolescence","After age 60"],a:0,ex:"Early premature age → first 3 months of life."},
+      {q:"Conceptional age (CA) equals:",opts:["Gestational age + time since birth","Time since birth only","Gestational age only","Age at first EEG"],a:0,ex:"CA = gestational age + legal age (physiological age)."},
+      {q:"Which is one of the 4 basic neonatal EEG patterns?",opts:["Tracé alternant (TA)","Alpha rhythm","Mu rhythm","Sleep spindles"],a:0,ex:"LVI, MV, HVS, and TA are the 4 neonatal patterns."},
+      {q:"The adult alpha rhythm is:",opts:["8–13 Hz, posterior, blocked by eye opening","13–30 Hz, frontal","4–7 Hz, temporal","0.5–4 Hz, generalized"],a:0,ex:"Posterior 8–13 Hz, present eyes-closed, blocked by eye opening."},
+      {q:"An awake adult alpha rhythm is abnormal if it:",opts:["Never exceeds 8.0 Hz","Reaches 11 Hz","Blocks with eye opening","Is symmetric"],a:0,ex:"Normal adult alpha is >8.0 Hz."},
+      {q:"Alpha rhythm is defined by frequency, distribution, and:",opts:["Reactivity","Color","Amplitude only","Electrode type"],a:0,ex:"Frequency, distribution, and reactivity."},
+      {q:"The brief rise in alpha frequency just after eye closure is the:",opts:["Squeak phenomenon","Mu rhythm","Lambda wave","K complex"],a:0,ex:"The squeak phenomenon."},
+      {q:"The mu rhythm differs from alpha because it:",opts:["Persists with eye opening (blocked by contralateral movement)","Is posterior","Blocks with eye opening","Only occurs in sleep"],a:0,ex:"Central mu persists with eyes open; blocked by limb movement."},
+      {q:"Which is a normal element of the sleep EEG?",opts:["Sleep spindles and K complexes","Alpha rhythm","Photic driving","Lambda waves"],a:0,ex:"Spindles, K complexes, vertex waves, POSTs, sawtooth waves."},
+      {q:"Sleep stages are scored using EEG, eye movements, and:",opts:["Submental (chin) muscle tone","Blood pressure","Pupil size","Reflexes"],a:0,ex:"EEG + EOG + chin EMG (PSG adds more)."},
+      {q:"REM sleep normally first begins about:",opts:["90–120 minutes after sleep onset","Immediately","10 minutes after onset","6 hours after onset"],a:0,ex:"90–120 min; onset within 20 min is abnormal (SOREMP)."},
+      {q:"Slow-wave sleep is specifically associated with secretion of:",opts:["Growth hormone","Insulin","Cortisol only","Melatonin"],a:0,ex:"Growth hormone."},
+      {q:"The test used to detect sleep-onset REM in narcolepsy is the:",opts:["Multiple Sleep Latency Test (MSLT)","Wake-up test","Tensilon test","Romberg test"],a:0,ex:"The MSLT."},
+      {q:"The normal EEG response to hyperventilation is:",opts:["A buildup of generalized slow waves","Faster alpha","Complete flattening","Sleep spindles"],a:0,ex:"Generalized slowing, more in the young."},
+      {q:"Which photic response is ABNORMAL?",opts:["Photoparoxysmal (photoconvulsive) response","Photic driving","Alpha blocking","A normal squeak"],a:0,ex:"Photoparoxysmal = abnormal; photic driving = normal."}
+    ],
+    cheat:[
+      {h:"Neonatal (Ch 10)", headers:["Pattern","Seen in"], rows:[
+        ["Low-voltage irregular (LVI)","Wakefulness, active sleep"],
+        ["Mixed voltage (MV)","Wake, transitional, active sleep"],
+        ["High-voltage slow (HVS)","Quiet sleep"],
+        ["Tracé alternant (TA)","Quiet sleep"]]},
+      {h:"Wakeful adult (Ch 11)", headers:["Rhythm","Key point"], rows:[
+        ["Alpha 8–13 Hz","Posterior, blocked by eye opening; >8 Hz normal"],
+        ["Beta >13 Hz","Frontal/central"],
+        ["Mu","Central; persists eyes-open, blocked by movement"],
+        ["Squeak","Brief ↑alpha after eye closure"]]},
+      {h:"Sleep (Ch 12)", hook:"Elements: <span class='hl'>spindles, K complexes, vertex waves, POSTs, delta, sawtooth</span>. Scored by EEG + EOG + chin EMG. REM begins <span class='hl'>90–120 min</span> after onset; SWS = first ⅔ of night + <span class='hl'>growth hormone</span>. MSLT detects narcolepsy."},
+      {h:"Activation (Ch 14)", hook:"Three procedures: <span class='hl'>hyperventilation</span> (→ generalized slowing), <span class='hl'>photic stimulation</span> (driving = normal, photoparoxysmal = abnormal), and <span class='hl'>sleep/sleep deprivation</span>."}
+    ]
+  }
+
+  ,{
+    id:"primerC1",
+    title:"EEG Primer — Part C (1): Seizures & Epileptiform",
+    sub:"Fisch & Spehlmann, ch. 15–19 (abnormal patterns, seizure classification, spikes & spike-wave)",
+    source:"Fisch & Spehlmann's EEG Primer, 3rd ed., Part C. Key terms & questions written from the text.",
+    cards:[
+      ["Ch15 Abnormal","What four things make an EEG 'abnormal'?","(A) <span class='hl'>Epileptiform activity</span>, (B) <span class='hl'>slow waves</span>, (C) <span class='hl'>abnormalities of amplitude</span>, or (D) specific deviations from normal patterns."],
+      ["Ch15 Abnormal","Do basic abnormal EEG patterns point to a specific disease?","<span class='hl'>No</span> — similar lesions produce similar patterns, and one disease can cause several patterns. The EEG shows the presence/type of dysfunction, not the exact diagnosis."],
+      ["Ch16 Seizures","Define a seizure.","A sudden, relatively brief disturbance of <span class='hl'>mental, motor, sensory, or autonomic</span> activity from abnormal excessive neuronal discharge."],
+      ["Ch16 Seizures","How does the international classification first divide seizures?","Into <span class='hl'>partial (focal)</span> vs <span class='hl'>generalized</span> — the first step in classification."],
+      ["Ch16 Seizures","Simple vs complex partial seizures — key difference?","<span class='hl'>Simple partial</span> = consciousness preserved; <span class='hl'>complex partial</span> = consciousness impaired."],
+      ["Ch16 Seizures","What is status epilepticus?","Seizures recurring so frequently there's <span class='hl'>no recovery between them</span> (or one prolonged seizure)."],
+      ["Ch16 Seizures","What is epilepsia partialis continua?","A <span class='hl'>continuous, stereotyped repetition</span> of one fairly constant type of focal (usually motor) seizure activity."],
+      ["Ch16 Seizures","What is reflex epilepsy?","Seizures <span class='hl'>triggered by a sensory stimulus</span> (e.g., light, sound)."],
+      ["Ch17 Focal","What is focal epileptiform activity?","<span class='hl'>Spikes or sharp waves</span> at one or a few neighboring electrodes; divided into <span class='hl'>interictal</span> and <span class='hl'>ictal</span>."],
+      ["Ch17 Focal","Spike vs sharp wave — how are they distinguished?","By <span class='hl'>duration</span> — a spike is briefer (<70 ms) and a sharp wave longer (70–200 ms); both stand out from the background."],
+      ["Ch17 Focal","What often follows an epileptiform spike/sharp wave?","An <span class='hl'>aftergoing slow wave</span> (not sharply contoured, longer duration than the background)."],
+      ["Ch17 Focal","Interictal vs ictal — what do they mean?","<span class='hl'>Interictal</span> = between seizures; <span class='hl'>ictal</span> = during a seizure."],
+      ["Ch18 Generalized","What EEG pattern defines a typical absence ('petit mal') seizure?","<span class='hl'>3 Hz spike-and-wave</span>, symmetric and generalized."],
+      ["Ch18 Generalized","What is hypsarrhythmia, and which syndrome is it associated with?","A chaotic, high-voltage, disorganized pattern associated with <span class='hl'>infantile spasms (West syndrome)</span>."],
+      ["Ch18 Generalized","What is a polyspike-and-wave complex associated with?","Bilateral massive epileptic myoclonus and generalized (often myoclonic/tonic-clonic) seizures."],
+      ["Ch18 Generalized","Slow spike-and-wave (<3 Hz) is characteristic of which syndrome?","<span class='hl'>Lennox-Gastaut syndrome</span> (tonic and atypical absence seizures)."],
+      ["Ch19 Ictal","What are pseudoperiodic patterns?","Repetitive discharges at fairly regular intervals — e.g., <span class='hl'>PLEDs</span> (periodic lateralized epileptiform discharges), often with acute focal lesions."],
+      ["Ch19 Ictal","What are pseudoepileptiform patterns?","Normal or benign sharp-looking patterns that <span class='hl'>mimic epileptiform activity</span> but are not (e.g., wicket spikes) — a common misinterpretation trap."]
+    ],
+    quiz:[
+      {q:"An EEG is called abnormal when it contains all EXCEPT:",opts:["A normal posterior alpha rhythm","Epileptiform activity","Slow waves","Amplitude abnormalities"],a:0,ex:"Abnormal = epileptiform, slow waves, amplitude changes, or deviations — not a normal alpha."},
+      {q:"Basic abnormal EEG patterns:",opts:["Do not point to one specific disease","Are diagnostic of a single disease","Only occur in epilepsy","Are always focal"],a:0,ex:"Similar lesions → similar patterns; the EEG isn't disease-specific."},
+      {q:"The first step in seizure classification is deciding whether the seizure is:",opts:["Partial or generalized","Simple or complex","Tonic or clonic","Nocturnal or diurnal"],a:0,ex:"Partial (focal) vs generalized comes first."},
+      {q:"The difference between simple and complex partial seizures is:",opts:["Consciousness (preserved vs impaired)","Duration only","Body side","Age of onset"],a:0,ex:"Simple = consciousness preserved; complex = impaired."},
+      {q:"Status epilepticus is best described as:",opts:["Seizures recurring with no recovery between them","A single brief seizure","A normal variant","Seizures only in sleep"],a:0,ex:"Continuous/recurrent seizures without recovery."},
+      {q:"Seizures triggered by a sensory stimulus are called:",opts:["Reflex epilepsy","Status epilepticus","Absence seizures","Epilepsia partialis continua"],a:0,ex:"Reflex epilepsy (e.g., photic-triggered)."},
+      {q:"Focal epileptiform activity consists of:",opts:["Spikes or sharp waves at one or a few electrodes","Generalized 3 Hz spike-wave","Alpha rhythm","Sleep spindles"],a:0,ex:"Localized spikes/sharp waves."},
+      {q:"A spike differs from a sharp wave mainly by its:",opts:["Shorter duration","Larger amplitude","Location","Polarity"],a:0,ex:"Spike <70 ms; sharp wave 70–200 ms."},
+      {q:"An epileptiform spike is often followed by a(n):",opts:["Aftergoing slow wave","Sleep spindle","Alpha run","Photic driving response"],a:0,ex:"A slow wave, longer than background, follows."},
+      {q:"'Ictal' refers to activity occurring:",opts:["During a seizure","Between seizures","Only in sleep","During hyperventilation"],a:0,ex:"Ictal = during a seizure; interictal = between."},
+      {q:"The classic EEG of a typical absence seizure is:",opts:["3 Hz spike-and-wave","Hypsarrhythmia","PLEDs","Alpha coma"],a:0,ex:"Symmetric, generalized 3 Hz spike-and-wave."},
+      {q:"Hypsarrhythmia is associated with:",opts:["Infantile spasms (West syndrome)","Absence epilepsy","Carpal tunnel","Narcolepsy"],a:0,ex:"Chaotic high-voltage pattern of infantile spasms."},
+      {q:"Slow spike-and-wave (<3 Hz) is characteristic of:",opts:["Lennox-Gastaut syndrome","Typical absence","Benign rolandic epilepsy","Normal sleep"],a:0,ex:"Lennox-Gastaut (tonic + atypical absence)."},
+      {q:"PLEDs (periodic lateralized epileptiform discharges) often occur with:",opts:["An acute focal lesion","Normal aging","Photic driving","Deep sleep"],a:0,ex:"PLEDs = pseudoperiodic, seen with acute focal lesions."},
+      {q:"Wicket spikes are an example of a:",opts:["Pseudoepileptiform (benign) pattern","True ictal discharge","Slow-wave abnormality","Amplitude asymmetry"],a:0,ex:"Benign pattern that mimics epileptiform activity."}
+    ],
+    cheat:[
+      {h:"What makes an EEG abnormal (Ch 15)", hook:"(A) <span class='hl'>Epileptiform</span> activity · (B) <span class='hl'>slow waves</span> · (C) <span class='hl'>amplitude</span> abnormalities · (D) deviations from normal. Patterns are NOT disease-specific."},
+      {h:"Seizure classification (Ch 16)", headers:["Term","Meaning"], rows:[
+        ["Partial vs generalized","First classification split"],
+        ["Simple partial","Consciousness preserved"],
+        ["Complex partial","Consciousness impaired"],
+        ["Status epilepticus","No recovery between seizures"],
+        ["Reflex epilepsy","Triggered by a sensory stimulus"]]},
+      {h:"Epileptiform discharges (Ch 17–18)", headers:["Pattern","Association"], rows:[
+        ["Spike","<70 ms"],
+        ["Sharp wave","70–200 ms"],
+        ["3 Hz spike-and-wave","Typical absence (petit mal)"],
+        ["Hypsarrhythmia","Infantile spasms (West)"],
+        ["Slow spike-wave (<3 Hz)","Lennox-Gastaut"]],
+        hook:"Interictal = between seizures; ictal = during. Spikes/sharps often have an <span class='hl'>aftergoing slow wave</span>."},
+      {h:"Mimics (Ch 19)", hook:"<span class='hl'>PLEDs</span> = pseudoperiodic, acute focal lesion. <span class='hl'>Wicket spikes</span> & other pseudoepileptiform patterns mimic seizures but are benign."}
+    ]
+  }
+
+  ,{
+    id:"primerC2",
+    title:"EEG Primer — Part C (2): Slow Waves, Amplitude & Report",
+    sub:"Fisch & Spehlmann, ch. 20–26 (focal/generalized slowing, amplitude, deviations, the EEG report)",
+    source:"Fisch & Spehlmann's EEG Primer, 3rd ed., Part C. Key terms & questions written from the text.",
+    cards:[
+      ["Ch20 Focal slow","What defines localized (focal) slow waves?","Waves <span class='hl'>under 8 Hz</span> in a focal distribution — usually <span class='hl'>irregular/arrhythmic delta</span> ('polymorphic delta activity')."],
+      ["Ch20 Focal slow","What do focal slow waves usually indicate?","A <span class='hl'>structural lesion</span> — acute onset or progressive (tumor, infarct, hemorrhage, abscess)."],
+      ["Ch20 Focal slow","How do focal delta waves react to eye opening / hyperventilation?","They show <span class='hl'>little attenuation</span> with eye opening/alerting and are <span class='hl'>not enhanced</span> by hyperventilation — unlike normal rhythms."],
+      ["Ch20 Focal slow","Do focal slow waves replace the background entirely?","Often <span class='hl'>not</span> — low-amplitude focal slowing can be subtle and hard to see against the background."],
+      ["Ch21 Gen slow","What are generalized asynchronous slow waves?","Bilateral slow waves with <span class='hl'>no constant time relationship</span> between the two sides — often maximal over one region."],
+      ["Ch21 Gen slow","What do generalized asynchronous slow waves usually indicate?","<span class='hl'>Diffuse encephalopathy</span> (metabolic, toxic, degenerative) — a nonspecific sign of widespread dysfunction."],
+      ["Ch21 Gen slow","When are generalized slow waves best recognized?","During <span class='hl'>wakefulness</span> (they can be normal in drowsiness/sleep)."],
+      ["Ch21 Gen slow","What is FIRDA?","<span class='hl'>Frontal Intermittent Rhythmic Delta Activity</span> — rhythmic frontal delta, a nonspecific sign often seen in encephalopathy or deep/midline lesions."],
+      ["Ch24 Amplitude","What can cause bilaterally LOW amplitude?","Toxic/metabolic states, widespread superficial cortical dysfunction, or (as an extreme) approaching <span class='hl'>electrocerebral inactivity</span>."],
+      ["Ch24 Amplitude","What commonly causes increased generalized BETA activity?","<span class='hl'>Drugs</span> — especially barbiturates and benzodiazepines."],
+      ["Ch24 Amplitude","Why is amplitude alone a weak criterion of abnormality?","It varies with <span class='hl'>interelectrode distance, skull thickness, and normal state</span> (anxiety, effort, eye position), so distribution/symmetry matter more."],
+      ["Ch24 Amplitude","What is burst suppression?","Alternating <span class='hl'>bursts of activity with periods of suppression (near-flat)</span> — deep anesthesia, severe encephalopathy, or hypothermia."],
+      ["Ch25 Deviations","What are 'deviations from normal patterns'?","Changes in normal rhythms (e.g., loss of reactivity, asymmetry, altered frequency) that fall <span class='hl'>outside normal limits</span> without being frank epileptiform or slow-wave abnormalities."],
+      ["Ch26 Report","What three parts should an EEG report include?","(1) A <span class='hl'>description</span> of normal & abnormal features, (2) an <span class='hl'>impression</span> (normal/abnormal), and (3) an <span class='hl'>interpretation</span> with clinical correlation."],
+      ["Ch26 Report","How should EEG activity be described in the report?","By <span class='hl'>frequency, amplitude, distribution, reactivity, and periodicity</span> — objectively, without anthropomorphizing."]
+    ],
+    quiz:[
+      {q:"Localized (focal) slow waves are defined as waves:",opts:["Under 8 Hz in a focal distribution","Over 13 Hz frontally","8–13 Hz posteriorly","Only during sleep"],a:0,ex:"Focal <8 Hz, usually irregular (polymorphic) delta."},
+      {q:"Focal slow waves usually indicate a:",opts:["Structural lesion","Normal variant","Metabolic problem only","Drug effect only"],a:0,ex:"A structural lesion (tumor, infarct, hemorrhage, abscess)."},
+      {q:"Compared with normal rhythms, focal delta waves:",opts:["Show little attenuation with eye opening","Block with eye opening","Increase with alerting","Only appear in REM"],a:0,ex:"They don't attenuate normally or respond to hyperventilation."},
+      {q:"Generalized asynchronous slow waves most often indicate:",opts:["Diffuse encephalopathy","A focal tumor","Normal wakefulness","A seizure focus"],a:0,ex:"Nonspecific sign of widespread dysfunction (metabolic/toxic/degenerative)."},
+      {q:"Generalized slow waves are best recognized during:",opts:["Wakefulness","Deep sleep","REM","Hyperventilation"],a:0,ex:"They can be normal in drowsiness/sleep, so wakefulness is key."},
+      {q:"FIRDA stands for:",opts:["Frontal Intermittent Rhythmic Delta Activity","Focal Irregular Rapid Delta Activity","Frontal Isolated Rhythmic Discharge Activity","Fast Intermittent Rhythmic Delta Arousal"],a:0,ex:"Frontal Intermittent Rhythmic Delta Activity — nonspecific."},
+      {q:"Increased generalized beta activity most commonly results from:",opts:["Drugs (barbiturates, benzodiazepines)","Ischemia","Deep sleep","A focal lesion"],a:0,ex:"Sedative/hypnotic drugs increase beta."},
+      {q:"Amplitude alone is a weak criterion of abnormality because it:",opts:["Varies with electrode distance, skull, and state","Is impossible to measure","Never changes","Only matters in children"],a:0,ex:"Distribution and symmetry are more reliable than raw amplitude."},
+      {q:"Burst suppression is characterized by:",opts:["Bursts of activity alternating with near-flat suppression","Continuous alpha","3 Hz spike-wave","Photic driving"],a:0,ex:"Deep anesthesia, severe encephalopathy, or hypothermia."},
+      {q:"Bilaterally low amplitude approaching a flat record suggests:",opts:["Severe cortical dysfunction / toward electrocerebral inactivity","Normal relaxed wakefulness","A benign variant","Focal slowing"],a:0,ex:"Toxic/metabolic or widespread dysfunction; extreme = ECI."},
+      {q:"A complete EEG report should include a description, an interpretation, and a(n):",opts:["Impression (normal/abnormal)","Billing code","Photo of the patient","Family history"],a:0,ex:"Description + impression + interpretation with clinical correlation."},
+      {q:"EEG activity in a report should be described by frequency, amplitude, distribution, reactivity, and:",opts:["Periodicity","Cost","Electrode brand","Room temperature"],a:0,ex:"Periodicity matters for many abnormal patterns."},
+      {q:"'Polymorphic delta activity' refers to:",opts:["Irregular focal slow waves of mixed frequency","Rhythmic 3 Hz spike-wave","A normal posterior rhythm","Sleep spindles"],a:0,ex:"Irregular (arrhythmic) focal delta = a structural-lesion marker."},
+      {q:"Deviations from normal patterns include:",opts:["Loss of reactivity or abnormal asymmetry","3 Hz spike-wave only","Only focal delta","Only amplitude"],a:0,ex:"Rhythm changes outside normal limits, not frank epileptiform/slow-wave."},
+      {q:"Generalized asynchronous slow waves differ from focal slow waves because they:",opts:["Are bilateral with no constant side-to-side time relationship","Are always 3 Hz","Only occur in children","Block with eye opening"],a:0,ex:"Bilateral & asynchronous vs focal/localized."}
+    ],
+    cheat:[
+      {h:"Slow waves", headers:["Type","Meaning"], rows:[
+        ["Focal (polymorphic) delta","Structural lesion (tumor/infarct/etc.)"],
+        ["Generalized asynchronous","Diffuse encephalopathy (metabolic/toxic)"],
+        ["FIRDA","Frontal rhythmic delta — nonspecific"]]},
+      {h:"Amplitude (Ch 24)", headers:["Finding","Cause"], rows:[
+        ["Low amplitude","Toxic/metabolic, cortical dysfunction; extreme = ECI"],
+        ["↑ Beta","Drugs (barbiturates, benzos)"],
+        ["Burst suppression","Deep anesthesia, severe encephalopathy, hypothermia"]],
+        hook:"Amplitude alone is weak — depends on electrode distance, skull, and state. Judge by <span class='hl'>distribution & symmetry</span>."},
+      {h:"The EEG report (Ch 26)", hook:"Three parts: <span class='hl'>description</span> → <span class='hl'>impression</span> (normal/abnormal) → <span class='hl'>interpretation</span> (clinical correlation). Describe activity by <span class='hl'>frequency, amplitude, distribution, reactivity, periodicity</span>."}
+    ]
+  }
+
 ];
 
 /* ===================== STATE ===================== */
-const progress = {}; // id -> {seen:Set, quizBest:null}
-TOPICS.forEach(t=>progress[t.id]={seen:new Set(), quizBest:null});
+const STORE_KEY='ndt_study_hub_progress_v1';
+let progress={}; // id -> {seen:[], quizBest:null, missed:[]}
+function blankProgress(){const o={};TOPICS.forEach(t=>o[t.id]={seen:[],quizBest:null,missed:[],scores:[]});return o;}
+function loadProgress(){
+  try{
+    const raw=localStorage.getItem(STORE_KEY);
+    if(raw){const saved=JSON.parse(raw);const base=blankProgress();
+      for(const id in base){ if(saved[id]){
+        base[id].seen=Array.isArray(saved[id].seen)?saved[id].seen:[];
+        base[id].quizBest=(typeof saved[id].quizBest==='number')?saved[id].quizBest:null;
+        base[id].missed=Array.isArray(saved[id].missed)?saved[id].missed:[];
+        base[id].scores=Array.isArray(saved[id].scores)?saved[id].scores:[];
+      }}
+      progress=base;return;
+    }
+  }catch(e){}
+  progress=blankProgress();
+}
+function saveProgress(){ try{localStorage.setItem(STORE_KEY,JSON.stringify(progress));}catch(e){} }
+loadProgress();
+const seenSet=id=>new Set(progress[id].seen);
+function markSeen(id,i){const s=seenSet(id);if(!s.has(i)){s.add(i);progress[id].seen=[...s];saveProgress();}}
+
 let cur=null;                 // current topic obj
-let fc={i:0,flip:false};      // flashcard state
-let qz={i:0,correct:0,answered:false,ans:[]};
+let fc={i:0,flip:false};
+let flipHintShown=false;
+let qz={i:0,correct:0,answered:false,ans:[],items:[],mixed:false,weak:false};
+let shuffleOn=true;           // shuffle questions + options by default
 
 const $=id=>document.getElementById(id);
 const pad=n=>String(n).padStart(2,'0');
 const screens=["home","topicMenu","flash","quiz","cheat","progress"];
 function show(id){screens.forEach(s=>$(s).classList.toggle('hidden',s!==id));window.scrollTo({top:0});}
 function setTop(crumb,title){$('crumb').textContent=crumb;$('topttl').textContent=title;}
+function shuffled(arr){const a=arr.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
 
 /* ===================== HOME ===================== */
 function renderHome(){
   const list=$('topicList');list.innerHTML='';
   TOPICS.forEach(t=>{
     const p=progress[t.id];
-    const pct=Math.round(p.seen.size/t.cards.length*100);
+    const pct=Math.round(seenSet(t.id).size/t.cards.length*100);
     const el=document.createElement('div');
     el.className='topic';
     el.onclick=()=>openTopic(t.id);
@@ -1096,15 +1556,42 @@ function renderHome(){
       <div class="bar"><i style="width:${pct}%"></i></div>`;
     list.appendChild(el);
   });
-  const totalSeen=TOPICS.reduce((s,t)=>s+progress[t.id].seen.size,0);
-  const started=TOPICS.filter(t=>progress[t.id].seen.size>0||progress[t.id].quizBest!=null).length;
+  const totalSeen=TOPICS.reduce((s,t)=>s+seenSet(t.id).size,0);
+  const started=TOPICS.filter(t=>seenSet(t.id).size>0||progress[t.id].quizBest!=null).length;
   const bestQuiz=Math.max(-1,...TOPICS.map(t=>progress[t.id].quizBest??-1));
   $('stStudied').textContent=totalSeen;
   $('stQuiz').textContent=bestQuiz<0?'—':bestQuiz+'%';
   $('stTopics').textContent=`${started}/${TOPICS.length}`;
-  $('homeSrc').innerHTML="Built from Na's NDT course materials. Sources are listed within each topic.";
+  $('homeSrc').innerHTML="Built from NDT course materials & textbooks. Progress saves on this device. Sources are listed within each topic.";
 }
-function goHome(){cur=null;setTop('NDT Study Hub','NDT Study Hub');$('tabHome').classList.add('active');$('tabProg').classList.remove('active');renderHome();show('home');}
+function goHome(){cur=null;setTop('NDT Study Hub','NDT Study Hub');$('tabHome').classList.add('active');$('tabProg').classList.remove('active');
+  $('searchBox').value='';$('searchResults').classList.add('hidden');$('topicList').classList.remove('hidden');$('mixedBtn').classList.remove('hidden');
+  renderHome();show('home');}
+
+/* ===================== SEARCH ===================== */
+function runSearch(q){
+  q=q.trim().toLowerCase();
+  const res=$('searchResults'), list=$('topicList'), mixed=$('mixedBtn');
+  if(q.length<2){res.classList.add('hidden');list.classList.remove('hidden');mixed.classList.remove('hidden');return;}
+  list.classList.add('hidden');mixed.classList.add('hidden');res.classList.remove('hidden');
+  const strip=s=>String(s).replace(/<[^>]+>/g,'');
+  const hits=[];
+  TOPICS.forEach(t=>{
+    t.cards.forEach((c,i)=>{
+      const q1=strip(c[1]),a1=strip(c[2]);
+      if((q1+' '+a1+' '+c[0]).toLowerCase().includes(q))
+        hits.push({topic:t,kind:'card',i,q:q1,a:a1});
+    });
+  });
+  res.innerHTML = hits.length? '' : '<div class="addnote">No matches. Try another term.</div>';
+  hits.slice(0,40).forEach(hit=>{
+    const d=document.createElement('div');d.className='sresult';
+    d.innerHTML=`<div class="st">${hit.topic.title}</div><div class="sq">${hit.q}</div><div class="sa">${hit.a}</div>`;
+    d.onclick=()=>{openTopic(hit.topic.id);startFlash(hit.i);};
+    res.appendChild(d);
+  });
+  if(hits.length>40){const m=document.createElement('div');m.className='addnote';m.textContent=`Showing first 40 of ${hits.length} matches — keep typing to narrow.`;res.appendChild(m);}
+}
 
 /* ===================== TOPIC MENU ===================== */
 function openTopic(id){
@@ -1114,12 +1601,14 @@ function openTopic(id){
   $('tmSub').textContent=cur.sub;
   $('tmFcCount').textContent=`${cur.cards.length} cards`;
   $('tmQzCount').textContent=`${cur.quiz.length} questions`;
+  renderHist();
   $('tmSrc').innerHTML='Source: '+cur.source;
   show('topicMenu');
 }
 
 /* ===================== FLASHCARDS ===================== */
-function startFlash(){fc={i:0,flip:false};setTop(cur.title,'Flashcards');$('fcTitle').textContent=cur.title;paintFlash();show('flash');}
+function startFlash(startAt){fc={i:startAt||0,flip:false};setTop(cur.title,'Flashcards');$('fcTitle').textContent=cur.title;paintFlash();show('flash');
+  if(!flipHintShown){const c=$('fcard');c.classList.add('hint');$('fcTip').style.display='block';setTimeout(()=>c.classList.remove('hint'),1200);}}
 function paintFlash(){
   const c=cur.cards[fc.i];
   const card=$('fcard');card.classList.remove('flip');fc.flip=false;
@@ -1127,67 +1616,113 @@ function paintFlash(){
   $('fcQ').innerHTML=(c[3]?`<div class="eegbox">${c[3]}</div>`:'')+c[1];$('fcA').innerHTML=c[2];
   $('fcCount').textContent=`${pad(fc.i+1)} / ${pad(cur.cards.length)}`;
   $('fcPrev').disabled=fc.i===0;$('fcNext').disabled=fc.i===cur.cards.length-1;
-  progress[cur.id].seen.add(fc.i);
-  const dots=$('fcDots');dots.innerHTML='';
+  markSeen(cur.id,fc.i);
+  const dots=$('fcDots');dots.innerHTML='';const s=seenSet(cur.id);
   cur.cards.forEach((_,n)=>{const d=document.createElement('div');
-    d.className='dot'+(n===fc.i?' cur':(progress[cur.id].seen.has(n)?' done':''));
+    d.className='dot'+(n===fc.i?' cur':(s.has(n)?' done':''));
     d.onclick=()=>{fc.i=n;paintFlash();};dots.appendChild(d);});
 }
-$('fcard').onclick=()=>{fc.flip=!fc.flip;$('fcard').classList.toggle('flip',fc.flip);};
+$('fcard').onclick=()=>{fc.flip=!fc.flip;$('fcard').classList.toggle('flip',fc.flip);if(!flipHintShown){flipHintShown=true;const tip=$('fcTip');if(tip)tip.style.display='none';}};
 $('fcPrev').onclick=()=>{if(fc.i>0){fc.i--;paintFlash();}};
 $('fcNext').onclick=()=>{if(fc.i<cur.cards.length-1){fc.i++;paintFlash();}};
 $('fcBack').onclick=()=>openTopic(cur.id);
 
 /* ===================== QUIZ ===================== */
-function startQuiz(){qz={i:0,correct:0,answered:false,ans:[]};setTop(cur.title,'Practice quiz');paintQuiz();show('quiz');}
+// Build a quiz item list with shuffled options; each item keeps a ref to its topic + original index.
+function buildItem(topic,origIndex){
+  const raw=topic.quiz[origIndex];
+  let opts=raw.opts.map((text,idx)=>({text,correct:idx===raw.a}));
+  if(shuffleOn) opts=shuffled(opts);
+  const aIndex=opts.findIndex(o=>o.correct);
+  return {topicId:topic.id,orig:origIndex,scen:raw.scen,svg:raw.svg,q:raw.q,ex:raw.ex,opts:opts.map(o=>o.text),a:aIndex};
+}
+function startQuiz(){
+  let items=cur.quiz.map((_,i)=>buildItem(cur,i));
+  if(shuffleOn) items=shuffled(items);
+  qz={i:0,correct:0,answered:false,ans:[],items,mixed:false,weak:false,label:cur.title};
+  setTop(cur.title,'Practice quiz');paintQuiz();show('quiz');
+}
+function startMixedQuiz(){
+  let items=[];
+  TOPICS.forEach(t=>t.quiz.forEach((_,i)=>items.push(buildItem(t,i))));
+  items=shuffled(items).slice(0,25); // 25-question mixed exam
+  qz={i:0,correct:0,answered:false,ans:[],items,mixed:true,weak:false,label:'Mixed quiz'};
+  cur=null;setTop('NDT Study Hub','Mixed quiz');paintQuiz();show('quiz');
+}
+function startWeakQuiz(){
+  let items=[];
+  TOPICS.forEach(t=>{(progress[t.id].missed||[]).forEach(i=>{if(t.quiz[i])items.push(buildItem(t,i));});});
+  if(!items.length){alert('No missed questions yet — take some quizzes first!');return;}
+  items=shuffled(items);
+  qz={i:0,correct:0,answered:false,ans:[],items,mixed:true,weak:true,label:'Missed questions'};
+  cur=null;setTop('NDT Study Hub','Review misses');paintQuiz();show('quiz');
+}
 function paintQuiz(){
-  const item=cur.quiz[qz.i];qz.answered=false;
-  $('qzFill').style.width=(qz.i/cur.quiz.length*100)+'%';
-  $('qzPos').textContent=`Q ${pad(qz.i+1)}`;
+  const item=qz.items[qz.i];qz.answered=false;const n=qz.items.length;
+  $('qzFill').style.width=(qz.i/n*100)+'%';
+  $('qzPos').textContent=`Q ${pad(qz.i+1)}/${pad(n)}`;
   $('qzAcc').textContent=qz.i?Math.round(qz.correct/qz.i*100)+'%':'—';
+  const topicTag=(qz.mixed)?`<div class="scenario" style="background:#eef;border-left-color:#5566cc;color:#334">${TOPICS.find(t=>t.id===item.topicId).title}</div>`:'';
   $('qzStage').innerHTML=`
+    ${topicTag}
     ${item.scen?`<div class="scenario">▸ ${item.scen}</div>`:''}
     ${item.svg?`<div class="eegbox">${item.svg}</div>`:''}
     <div class="qtext">${item.q}</div>
     <div id="qzOpts"></div>
     <div class="exp" id="qzExp"><b>Why:</b> ${item.ex}</div>
     <div class="fcnav"><span class="counter">${qz.correct} correct</span>
-      <button class="mv" id="qzNext" disabled>${qz.i===cur.quiz.length-1?'Results':'Next'}</button></div>`;
+      <button class="mv" id="qzNext" disabled>${qz.i===n-1?'Results':'Next'}</button></div>`;
   const box=$('qzOpts');
   item.opts.forEach((o,idx)=>{const b=document.createElement('button');
     b.className='opt';b.innerHTML=`<span class="k">${String.fromCharCode(65+idx)}</span>${o}`;
     b.onclick=()=>chooseQ(idx);box.appendChild(b);});
   $('qzNext').onclick=nextQ;
 }
+function recordMiss(topicId,orig,wasWrong){
+  const arr=progress[topicId].missed||(progress[topicId].missed=[]);
+  const pos=arr.indexOf(orig);
+  if(wasWrong){ if(pos<0)arr.push(orig); }
+  else { if(pos>=0)arr.splice(pos,1); } // answered correctly → clear from misses
+  saveProgress();
+}
 function chooseQ(idx){
   if(qz.answered)return;qz.answered=true;
-  const item=cur.quiz[qz.i];const btns=[...document.querySelectorAll('#qzOpts .opt')];
+  const item=qz.items[qz.i];const btns=[...document.querySelectorAll('#qzOpts .opt')];
   btns.forEach((b,bi)=>{b.disabled=true;
     if(bi===item.a)b.classList.add('correct');
     else if(bi===idx)b.classList.add('wrong');else b.classList.add('muted');});
   const ok=idx===item.a;if(ok)qz.correct++;
-  qz.ans.push({q:item.q,ok});
+  qz.ans.push({q:item.q,ok,topicId:item.topicId});
+  recordMiss(item.topicId,item.orig,!ok);
   $('qzExp').classList.add('show');$('qzNext').disabled=false;
   $('qzAcc').textContent=Math.round(qz.correct/(qz.i+1)*100)+'%';
 }
-function nextQ(){if(qz.i<cur.quiz.length-1){qz.i++;paintQuiz();window.scrollTo({top:0});}else resultsQ();}
+function nextQ(){if(qz.i<qz.items.length-1){qz.i++;paintQuiz();window.scrollTo({top:0});}else resultsQ();}
 function resultsQ(){
+  if(qz.placement){placementResults();return;}
+  const n=qz.items.length;
   $('qzFill').style.width='100%';
-  const pct=Math.round(qz.correct/cur.quiz.length*100);
-  $('qzPos').textContent=`Q ${pad(cur.quiz.length)}`;$('qzAcc').textContent=pct+'%';
-  const prev=progress[cur.id].quizBest;progress[cur.id].quizBest=prev==null?pct:Math.max(prev,pct);
+  const pct=Math.round(qz.correct/n*100);
+  $('qzPos').textContent=`Q ${pad(n)}/${pad(n)}`;$('qzAcc').textContent=pct+'%';
+  let newBest=false;
+  if(!qz.mixed && cur){const prev=progress[cur.id].quizBest;if(prev==null||pct>prev){progress[cur.id].quizBest=pct;newBest=prev!=null;}
+    (progress[cur.id].scores||(progress[cur.id].scores=[])).push(pct);
+    if(progress[cur.id].scores.length>12)progress[cur.id].scores=progress[cur.id].scores.slice(-12);
+    saveProgress();}
   let grade=pct>=90?'Clean tracing':pct>=75?'Solid work':pct>=60?'Review the misses':'Run it again';
-  const rev=qz.ans.map((r,n)=>`<div class="rev-item"><span class="mk ${r.ok?'ok':'no'}">${r.ok?'✓':'✕'}</span><span>${pad(n+1)}. ${r.q}</span></div>`).join('');
+  const rev=qz.ans.map((r,i)=>`<div class="rev-item"><span class="mk ${r.ok?'ok':'no'}">${r.ok?'✓':'✕'}</span><span>${pad(i+1)}. ${r.q}</span></div>`).join('');
+  const retry = qz.weak? 'startWeakQuiz()' : qz.mixed? 'startMixedQuiz()' : 'startQuiz()';
+  const backBtn = (qz.mixed)?`<button class="mv ghost" onclick="goHome()">Home</button>`:`<button class="mv ghost" onclick="openTopic(cur.id)">Topic menu</button>`;
   $('qzStage').innerHTML=`<div class="results">
     <div class="big">${pct}<span>%</span></div>
     <div class="grade">${grade}</div>
-    <p>${qz.correct} of ${cur.quiz.length} correct${progress[cur.id].quizBest===pct&&prev!=null&&pct>prev?' · new best!':''}</p>
+    <p>${qz.correct} of ${n} correct${newBest?' · new best!':''}</p>
     <div class="btns" style="justify-content:center">
-      <button class="mv ghost" onclick="openTopic(cur.id)">Topic menu</button>
-      <button class="mv" onclick="startQuiz()">Retry</button></div>
+      ${backBtn}
+      <button class="mv" onclick="${retry}">Retry</button></div>
     <div class="review"><h3>Question review</h3>${rev}</div></div>`;
 }
-$('qzBack').onclick=()=>openTopic(cur.id);
+$('qzBack').onclick=()=>{ if(qz.mixed) goHome(); else openTopic(cur.id); };
 
 /* ===================== CHEAT SHEET ===================== */
 function startCheat(){
@@ -1215,20 +1750,36 @@ function goProgress(){
   setTop('NDT Study Hub','Progress');
   $('tabProg').classList.add('active');$('tabHome').classList.remove('active');
   const list=$('prgList');list.innerHTML='';
+  let totalMissed=0;
   TOPICS.forEach(t=>{
-    const p=progress[t.id];const pct=Math.round(p.seen.size/t.cards.length*100);
+    const p=progress[t.id];const pct=Math.round(seenSet(t.id).size/t.cards.length*100);
+    const miss=(p.missed||[]).length;totalMissed+=miss;
     const el=document.createElement('div');el.className='topic';el.onclick=()=>openTopic(t.id);
     el.innerHTML=`<div class="accent"></div><div class="pct">${pct}%</div>
       <h3>${t.title}</h3>
-      <div class="meta">${p.seen.size}/${t.cards.length} cards seen${p.quizBest!=null?` · best quiz ${p.quizBest}%`:' · quiz not taken'}</div>
+      <div class="meta">${seenSet(t.id).size}/${t.cards.length} cards${p.quizBest!=null?` · best quiz ${p.quizBest}%`:' · quiz not taken'}${miss?` · ${miss} to review`:''}</div>
       <div class="bar"><i style="width:${pct}%"></i></div>`;
     list.appendChild(el);
   });
-  const totalSeen=TOPICS.reduce((s,t)=>s+progress[t.id].seen.size,0);
+  const totalSeen=TOPICS.reduce((s,t)=>s+seenSet(t.id).size,0);
   const totalCards=TOPICS.reduce((s,t)=>s+t.cards.length,0);
-  $('prgNote').textContent=`${totalSeen} of ${totalCards} cards seen across ${TOPICS.length} topics.`;
+  $('prgNote').textContent=`${totalSeen} of ${totalCards} cards seen · ${totalMissed} question${totalMissed===1?'':'s'} flagged to review.`;
+  $('weakBtn').style.display=totalMissed?'block':'none';
+  $('prgSaveNote').textContent='Progress is saved automatically on this device.';
   show('progress');
 }
+
+/* ===================== EVENTS ===================== */
+$('searchBox').addEventListener('input',e=>runSearch(e.target.value));
+$('mixedBtn').onclick=startMixedQuiz;
+$('weakBtn').onclick=startWeakQuiz;
+$('themeBtn').onclick=toggleTheme;
+$('placeBtn').onclick=startPlacement;
+$('resetBtn').onclick=()=>{
+  if(confirm('Reset all progress on this device? This cannot be undone.')){
+    progress=blankProgress();saveProgress();goProgress();
+  }
+};
 
 /* keyboard for laptop use */
 document.addEventListener('keydown',e=>{
@@ -1239,8 +1790,73 @@ document.addEventListener('keydown',e=>{
   }
 });
 
+
+/* ===================== SCORE HISTORY ===================== */
+function renderHist(){
+  const box=$('tmHist'); if(!box) return;
+  const scores=(progress[cur.id].scores||[]);
+  if(scores.length<1){box.innerHTML='';return;}
+  const bars=scores.map(s=>`<div class="hb" style="height:${Math.max(3,Math.round(s*0.42))}px" title="${s}%"></div>`).join('');
+  const first=scores[0], last=scores[scores.length-1];
+  const trend = scores.length>1 ? (last>first?`▲ up ${last-first}%`:last<first?`▼ down ${first-last}%`:'▬ steady') : '';
+  box.innerHTML=`<div class="sectlabel" style="margin-top:16px">Your quiz history (${scores.length})</div>
+    <div class="histbar">${bars}</div>
+    <div class="histrow"><span>first ${first}%</span><span>${trend}</span><span>latest ${last}%</span></div>`;
+}
+
+/* ===================== THEME ===================== */
+const THEME_KEY='ndt_study_hub_theme';
+function applyTheme(mode){
+  document.documentElement.setAttribute('data-theme', mode==='dark'?'dark':'light');
+  const b=$('themeBtn'); if(b) b.textContent = mode==='dark'?'☀️':'🌙';
+  const meta=document.querySelector('meta[name=theme-color]'); if(meta) meta.setAttribute('content', mode==='dark'?'#0c1622':'#0c1a2b');
+}
+function initTheme(){
+  let mode='light';
+  try{ mode=localStorage.getItem(THEME_KEY)||'light'; }catch(e){}
+  applyTheme(mode);
+}
+function toggleTheme(){
+  const cur = document.documentElement.getAttribute('data-theme')==='dark'?'dark':'light';
+  const next = cur==='dark'?'light':'dark';
+  try{ localStorage.setItem(THEME_KEY,next); }catch(e){}
+  applyTheme(next);
+}
+
+/* ===================== PLACEMENT QUIZ ===================== */
+// One question drawn from each topic (up to ~20). Flags weakest topics afterward.
+function startPlacement(){
+  let items=[];
+  TOPICS.forEach(t=>{ if(t.quiz.length){ const qi=Math.floor(Math.random()*t.quiz.length); const it=buildItem(t,qi); it._placeTopic=t.id; items.push(it);} });
+  items=shuffled(items);
+  qz={i:0,correct:0,answered:false,ans:[],items,mixed:true,weak:false,placement:true,label:'Placement'};
+  cur=null;setTop('NDT Study Hub','Placement quiz');paintQuiz();show('quiz');
+}
+function placementResults(){
+  // tally per-topic correctness from this run
+  const byTopic={};
+  qz.ans.forEach((r,i)=>{const tid=qz.items[i].topicId;(byTopic[tid]=byTopic[tid]||{c:0,n:0});byTopic[tid].n++;if(r.ok)byTopic[tid].c++;});
+  const weak=Object.keys(byTopic).filter(tid=>byTopic[tid].c===0);
+  const pct=Math.round(qz.correct/qz.items.length*100);
+  const weakList = weak.length
+    ? weak.map(tid=>{const t=TOPICS.find(x=>x.id===tid);return `<div class="sresult" onclick="openTopic('${tid}')"><div class="st">Start here</div><div class="sq">${t.title}</div></div>`;}).join('')
+    : '<p>No obvious weak spots — nice! Keep reviewing across topics.</p>';
+  $('qzStage').innerHTML=`<div class="results">
+    <div class="big">${pct}<span>%</span></div>
+    <div class="grade">Placement complete</div>
+    <div class="placecard"><h4>Where to focus</h4>
+      <p>Based on this quick check, these topics need the most work:</p></div>
+    <div style="text-align:left">${weakList}</div>
+    <div class="btns" style="justify-content:center;margin-top:16px">
+      <button class="mv ghost" onclick="goHome()">Home</button>
+      <button class="mv" onclick="startPlacement()">Retake</button></div></div>`;
+}
+
+
+initTheme();
 goHome();
 </script>
+
 <script>
 /* Register service worker for offline use (ignored when opened as a local file). */
 if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {

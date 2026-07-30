@@ -1,5 +1,5 @@
 /* NDT Study Hub — service worker (offline cache) */
-const CACHE = "ndt-study-hub-v3";
+const CACHE = "ndt-study-hub-v11";
 const ASSETS = [
   "./",
   "./index.html",
