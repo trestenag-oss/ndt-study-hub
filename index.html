@@ -1,0 +1,1024 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>NDT Study Hub</title>
+<!-- PWA -->
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0c1a2b">
+<link rel="icon" href="favicon.png" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="NDT Study">
+<meta name="mobile-web-app-capable" content="yes">
+<style>
+  :root{
+    --ink:#0c1a2b;
+    --paper:#f5f1e8;
+    --card:#ffffff;
+    --trace:#e8542f;
+    --trace-dim:#c4441f;
+    --signal:#1f8a70;
+    --signal-bg:#e4f2ee;
+    --err:#b02a37;
+    --err-bg:#f7e6e7;
+    --line:#d8d0be;
+    --muted:#5a6472;
+    --panel:#0f2136;
+    --back:#12324a;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{
+    background:var(--paper);color:var(--ink);
+    font-family:"Helvetica Neue",Arial,sans-serif;line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+    max-width:520px;margin:0 auto;position:relative;
+    padding-bottom:74px;min-height:100%;
+  }
+  .mono{font-family:"Courier New",monospace}
+
+  /* ---------- top bar ---------- */
+  .topbar{
+    position:sticky;top:0;z-index:20;background:var(--paper);
+    border-bottom:2px solid var(--ink);padding:16px 18px 12px;
+  }
+  .eyebrow{font-family:"Courier New",monospace;font-size:11px;letter-spacing:.22em;
+    text-transform:uppercase;color:var(--trace-dim);font-weight:700}
+  .topbar h1{font-size:22px;letter-spacing:-.01em;margin-top:2px}
+  .topbar .who{color:var(--muted);font-size:13px;margin-top:2px}
+
+  .screen{padding:16px 18px}
+  .hidden{display:none !important}
+
+  /* ---------- home ---------- */
+  .streakrow{display:flex;gap:10px;margin-bottom:16px}
+  .stat{flex:1;background:var(--panel);color:#cfe6df;border-radius:12px;padding:12px 14px}
+  .stat .n{font-size:26px;font-weight:800;line-height:1}
+  .stat .l{font-family:"Courier New",monospace;font-size:10px;letter-spacing:.12em;
+    text-transform:uppercase;color:#7fb5a5;margin-top:5px}
+
+  .sectlabel{font-family:"Courier New",monospace;font-size:11px;letter-spacing:.15em;
+    text-transform:uppercase;color:var(--muted);margin:20px 2px 10px}
+
+  .topic{
+    background:var(--card);border:1px solid var(--line);border-radius:14px;
+    padding:16px 16px;margin-bottom:12px;cursor:pointer;
+    transition:transform .06s, box-shadow .15s, border-color .15s;position:relative;overflow:hidden;
+  }
+  .topic:active{transform:scale(.99)}
+  .topic:hover{border-color:var(--trace);box-shadow:0 3px 14px rgba(12,26,43,.07)}
+  .topic .accent{position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--trace)}
+  .topic h3{font-size:17px;margin-left:8px}
+  .topic .meta{margin-left:8px;color:var(--muted);font-size:12.5px;margin-top:3px}
+  .topic .bar{margin:10px 0 0 8px;height:6px;background:#ece7d8;border-radius:99px;overflow:hidden}
+  .topic .bar > i{display:block;height:100%;background:var(--signal);width:0;border-radius:99px;transition:width .5s}
+  .topic .pct{position:absolute;right:14px;top:14px;font-family:"Courier New",monospace;
+    font-size:12px;color:var(--muted);font-weight:700}
+
+  /* ---------- topic menu ---------- */
+  .back-btn{display:inline-flex;align-items:center;gap:6px;background:none;border:none;
+    color:var(--trace-dim);font-family:"Courier New",monospace;font-size:12px;letter-spacing:.1em;
+    text-transform:uppercase;font-weight:700;cursor:pointer;padding:0;margin-bottom:14px}
+  .modegrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .mode{
+    background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 14px;
+    cursor:pointer;text-align:left;transition:transform .06s,border-color .15s;
+  }
+  .mode:active{transform:scale(.98)}
+  .mode:hover{border-color:var(--trace)}
+  .mode .ic{font-size:22px}
+  .mode .t{font-weight:700;margin-top:8px;font-size:15px}
+  .mode .d{color:var(--muted);font-size:12px;margin-top:2px}
+  .mode.wide{grid-column:1 / -1}
+
+  h2.screenttl{font-size:20px;margin-bottom:3px}
+  .screensub{color:var(--muted);font-size:13px;margin-bottom:16px}
+
+  /* ---------- flashcards ---------- */
+  .stage{perspective:1400px;margin-top:6px}
+  .fcard{position:relative;width:100%;min-height:280px;cursor:pointer;
+    transform-style:preserve-3d;transition:transform .55s cubic-bezier(.3,.7,.3,1)}
+  .fcard.flip{transform:rotateY(180deg)}
+  .face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;
+    border-radius:16px;padding:28px 24px;display:flex;flex-direction:column;justify-content:center;
+    border:1px solid var(--line)}
+  .front{background:#fff;box-shadow:0 2px 12px rgba(12,26,43,.06)}
+  .back{background:var(--back);color:#eaf4f0;transform:rotateY(180deg);border-color:var(--back)}
+  .face .tag{font-family:"Courier New",monospace;font-size:10px;letter-spacing:.15em;
+    text-transform:uppercase;font-weight:700;margin-bottom:12px}
+  .front .tag{color:var(--trace-dim)} .back .tag{color:#6fd3ba}
+  .face .q{font-size:20px;font-weight:600;line-height:1.35}
+  .face .a{font-size:16px}
+  .a .hl,.exp .hl{color:#7fe0c6;font-weight:700}
+  .front .fliphint,.back .fliphint{margin-top:18px;font-family:"Courier New",monospace;font-size:10px;
+    letter-spacing:.12em;text-transform:uppercase}
+  .front .fliphint{color:var(--muted)} .back .fliphint{color:#5f8aa0}
+  .fcnav{display:flex;justify-content:space-between;align-items:center;margin-top:16px;gap:10px}
+  .counter{font-family:"Courier New",monospace;font-size:14px;color:var(--muted)}
+  .btns{display:flex;gap:8px}
+  button.mv{background:var(--ink);color:#fff;border:none;border-radius:10px;padding:11px 18px;
+    font-size:14px;font-weight:600;cursor:pointer;font-family:inherit}
+  button.mv:disabled{opacity:.3} button.ghost{background:none;border:1.5px solid var(--line);color:var(--ink)}
+  .dots{display:flex;flex-wrap:wrap;gap:5px;margin-top:16px;justify-content:center}
+  .dot{width:8px;height:8px;border-radius:99px;background:var(--line);transition:.15s}
+  .dot.done{background:var(--signal)} .dot.cur{background:var(--trace);transform:scale(1.5)}
+
+  /* ---------- quiz ---------- */
+  .scope{background:var(--panel);border-radius:10px;padding:11px 13px;color:#cfe6df;
+    font-family:"Courier New",monospace;font-size:12px;display:flex;align-items:center;gap:10px;margin-bottom:16px}
+  .scope .bar{flex:1;height:7px;background:#22384f;border-radius:99px;overflow:hidden}
+  .scope .fill{height:100%;width:0;background:var(--trace);border-radius:99px;transition:width .4s}
+  .opt{display:block;width:100%;text-align:left;background:#fff;border:1.5px solid var(--line);
+    border-radius:10px;padding:13px 14px;margin-bottom:9px;font-size:15px;color:var(--ink);
+    cursor:pointer;font-family:inherit;transition:.12s}
+  .opt:hover:not(:disabled){border-color:var(--trace);background:#fffaf7}
+  .opt .k{font-family:"Courier New",monospace;font-weight:700;color:var(--trace-dim);margin-right:8px}
+  .opt.correct{background:var(--signal-bg);border-color:var(--signal)} .opt.correct .k{color:var(--signal)}
+  .opt.wrong{background:var(--err-bg);border-color:var(--err)} .opt.wrong .k{color:var(--err)}
+  .opt.muted{opacity:.5}
+  .exp{margin-top:4px;font-size:14px;padding:12px 13px;border-radius:9px;background:#f2efe4;
+    border:1px dashed var(--line);display:none} .exp.show{display:block} .exp b{color:var(--signal)}
+  .qtext{font-size:17.5px;font-weight:600;margin:4px 0 14px}
+  .scenario{background:var(--signal-bg);border-left:3px solid var(--signal);padding:9px 11px;
+    border-radius:0 6px 6px 0;font-size:13.5px;margin-bottom:13px;color:#173f36}
+
+  /* ---------- cheat sheet ---------- */
+  .cs h4{font-size:15px;color:var(--trace-dim);margin:18px 0 8px;font-family:"Courier New",monospace;
+    letter-spacing:.04em;text-transform:uppercase}
+  .cs table{width:100%;border-collapse:collapse;margin-bottom:6px;font-size:13.5px}
+  .cs th{background:var(--panel);color:#fff;text-align:left;padding:7px 9px;font-size:12px}
+  .cs td{padding:7px 9px;border-bottom:1px solid #eee5d3;vertical-align:top}
+  .cs tr:nth-child(even) td{background:#faf8f1}
+  .cs .hook{background:#fff;border:1px dashed var(--line);border-radius:9px;padding:11px 13px;
+    font-size:13.5px;color:#333;font-style:italic;margin-top:6px}
+  .cs .hl{color:var(--signal);font-weight:700;font-style:normal}
+
+  .done-banner{background:var(--signal-bg);border:1px solid var(--signal);color:#12332c;
+    border-radius:10px;padding:11px 13px;font-size:13.5px;margin-bottom:14px}
+
+  /* results */
+  .results{text-align:center;padding:22px 10px}
+  .results .big{font-size:52px;font-weight:800;line-height:1}
+  .results .big span{font-size:24px;color:var(--muted)}
+  .results .grade{font-family:"Courier New",monospace;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--trace-dim);font-weight:700;margin-top:6px;font-size:13px}
+  .results p{color:var(--muted);margin:12px 0 18px;font-size:14px}
+  .review{text-align:left;margin-top:18px}
+  .review h3{font-size:12px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);
+    border-bottom:1px solid var(--line);padding-bottom:5px;margin-bottom:8px;font-family:"Courier New",monospace}
+  .rev-item{font-size:13.5px;padding:7px 0;border-bottom:1px solid #eee5d3;display:flex;gap:9px}
+  .rev-item .mk.ok{color:var(--signal);font-weight:800} .rev-item .mk.no{color:var(--err);font-weight:800}
+
+  /* ---------- bottom nav ---------- */
+  .tabbar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:520px;
+    background:#fff;border-top:1px solid var(--line);display:flex;z-index:30}
+  .tab{flex:1;background:none;border:none;padding:9px 0 11px;cursor:pointer;color:var(--muted);
+    font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:3px}
+  .tab .ic{font-size:19px;line-height:1}
+  .tab .lb{font-size:10px;font-family:"Courier New",monospace;letter-spacing:.08em;text-transform:uppercase}
+  .tab.active{color:var(--trace)}
+
+  .srcnote{margin-top:26px;font-size:10.5px;color:var(--muted);font-family:"Courier New",monospace;line-height:1.7}
+  .addnote{margin-top:14px;font-size:12px;color:var(--muted);background:#fff;border:1px dashed var(--line);
+    border-radius:9px;padding:11px 13px}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="eyebrow" id="crumb">NDT Study Hub</div>
+  <h1 id="topttl">NDT Study Hub</h1>
+  <div class="who">Neurodiagnostic tech · exam prep</div>
+</div>
+
+<!-- ===================== HOME ===================== -->
+<div class="screen" id="home">
+  <div class="streakrow">
+    <div class="stat"><div class="n" id="stStudied">0</div><div class="l">Cards seen</div></div>
+    <div class="stat"><div class="n" id="stQuiz">—</div><div class="l">Best quiz</div></div>
+    <div class="stat"><div class="n" id="stTopics">0/0</div><div class="l">Topics started</div></div>
+  </div>
+  <div class="sectlabel">Topics</div>
+  <div id="topicList"></div>
+  <div class="addnote">More material can be added over time — each topic holds its own flashcards, quiz, and cheat sheet.</div>
+  <div class="srcnote" id="homeSrc"></div>
+</div>
+
+<!-- ===================== TOPIC MENU ===================== -->
+<div class="screen hidden" id="topicMenu">
+  <button class="back-btn" onclick="goHome()">◂ All topics</button>
+  <h2 class="screenttl" id="tmTitle"></h2>
+  <div class="screensub" id="tmSub"></div>
+  <div class="modegrid">
+    <button class="mode" onclick="startFlash()"><div class="ic">🗂️</div><div class="t">Flashcards</div><div class="d" id="tmFcCount"></div></button>
+    <button class="mode" onclick="startQuiz()"><div class="ic">✎</div><div class="t">Practice quiz</div><div class="d" id="tmQzCount"></div></button>
+    <button class="mode wide" onclick="startCheat()"><div class="ic">⚡</div><div class="t">Cheat sheet</div><div class="d">Quick reference — the things people mix up</div></button>
+  </div>
+  <div class="srcnote" id="tmSrc"></div>
+</div>
+
+<!-- ===================== FLASHCARDS ===================== -->
+<div class="screen hidden" id="flash">
+  <button class="back-btn" id="fcBack">◂ Back</button>
+  <h2 class="screenttl" id="fcTitle"></h2>
+  <div class="screensub">Tap the card to flip.</div>
+  <div class="stage">
+    <div class="fcard" id="fcard">
+      <div class="face front"><div class="tag" id="fcTag"></div><div class="q" id="fcQ"></div><div class="fliphint">Tap to reveal ▸</div></div>
+      <div class="face back"><div class="tag">Answer</div><div class="a" id="fcA"></div><div class="fliphint">◂ Tap to flip back</div></div>
+    </div>
+  </div>
+  <div class="fcnav">
+    <span class="counter" id="fcCount">01 / 01</span>
+    <div class="btns"><button class="mv ghost" id="fcPrev">Prev</button><button class="mv" id="fcNext">Next</button></div>
+  </div>
+  <div class="dots" id="fcDots"></div>
+</div>
+
+<!-- ===================== QUIZ ===================== -->
+<div class="screen hidden" id="quiz">
+  <button class="back-btn" id="qzBack">◂ Back</button>
+  <div class="scope"><span id="qzPos">Q 01</span><div class="bar"><div class="fill" id="qzFill"></div></div><span id="qzAcc">—</span></div>
+  <div id="qzStage"></div>
+</div>
+
+<!-- ===================== CHEAT SHEET ===================== -->
+<div class="screen hidden" id="cheat">
+  <button class="back-btn" id="csBack">◂ Back</button>
+  <h2 class="screenttl" id="csTitle"></h2>
+  <div class="screensub">Quick reference</div>
+  <div class="cs" id="csBody"></div>
+  <div class="srcnote" id="csSrc"></div>
+</div>
+
+<!-- ===================== TAB BAR ===================== -->
+<div class="tabbar">
+  <button class="tab active" id="tabHome" onclick="goHome()"><span class="ic">▦</span><span class="lb">Topics</span></button>
+  <button class="tab" id="tabProg" onclick="goProgress()"><span class="ic">◔</span><span class="lb">Progress</span></button>
+</div>
+
+<!-- ===================== PROGRESS ===================== -->
+<div class="screen hidden" id="progress">
+  <h2 class="screenttl">Your progress</h2>
+  <div class="screensub" id="prgNote"></div>
+  <div id="prgList"></div>
+  <div class="addnote">Progress tracks while the app is open. To keep it permanently, save this file to your phone and open it from there.</div>
+</div>
+
+<script>
+/* =====================================================================
+   CONTENT  —  add new topics / cards / questions here.
+   Each topic = { id, title, sub, source, cards[], quiz[], cheat[] }
+   card  = [tag, question(html), answer(html)]
+   quiz  = { scen?, q, opts[], a(index), ex(html) }
+   cheat = { h, rows:[[c1,c2,...]], headers:[...], hook? }  (any field optional)
+   ===================================================================== */
+const TOPICS = [
+  {
+    id:"ionm",
+    title:"IONM & EEG Fundamentals",
+    sub:"From the course slide deck + ACNS Guideline 11A",
+    source:"“Fundamentals of Intraoperative EEG / IONM” course deck; ACNS Guideline 11A.",
+    cards:[
+      ["Core","What is IONM crucial for?","Patient safety during surgery — detecting nervous-system changes early to <span class='hl'>prevent permanent neurological damage</span>."],
+      ["History","Who recorded the first human EEG?","<span class='hl'>Hans Berger</span> (1873–1941)."],
+      ["History","Who advanced brain mapping during epilepsy surgery?","<span class='hl'>Wilder Penfield</span> — correlated brain regions with functions."],
+      ["Physiology","EEG signals originate from which cells?","Millions of synchronized <span class='hl'>pyramidal neurons</span> in the cortex."],
+      ["Physiology","Why are pyramidal neurons ideal for EEG?","They're <span class='hl'>aligned the same direction</span>, so signals summate instead of canceling out."],
+      ["Features","EEG feature: Amplitude — what reduces it?","Summed voltage of activity; reduced by <span class='hl'>anesthesia or ischemia</span>."],
+      ["Features","EEG feature: Frequency — warning sign?","Rate of brain waves; <span class='hl'>slowing</span> is often the earliest sign of distress."],
+      ["Features","EEG feature: Symmetry — why it matters?","Compares mirror-image regions; crucial for detecting <span class='hl'>unilateral (one-sided)</span> changes."],
+      ["Features","Clinical pearl: 2 features that beat amplitude alone?","<span class='hl'>Frequency and symmetry</span>."],
+      ["Ischemia","4 perfusion states, best → worst?","Normal → <span class='hl'>Oligemia → Ischemia → Infarction</span>."],
+      ["Ischemia","First EEG sign of ischemia?","<span class='hl'>Loss of fast (beta) frequencies</span>, then increasing slow delta."],
+      ["Ischemia","EEG at infarction?","<span class='hl'>Flat / isoelectric</span> — no longer reversible."],
+      ["Modalities","What does SSEP evaluate?","<span class='hl'>Ascending sensory</span> pathways."],
+      ["Modalities","What does TcMEP evaluate?","<span class='hl'>Descending motor</span> pathways."],
+      ["Modalities","What does BAEP evaluate?","<span class='hl'>Brainstem auditory</span> pathways."],
+      ["Modalities","What does EMG evaluate?","<span class='hl'>Peripheral nerve</span> activity."]
+    ],
+    quiz:[
+      {q:"What is IONM primarily used for?",opts:["Preventing permanent neurological damage by detecting changes early","Recording data for billing","Replacing the anesthesiologist","Measuring blood pressure only"],a:0,ex:"IONM = real-time nervous-system watch to <b>catch injury early enough to fix it</b>."},
+      {q:"Who recorded the first human EEG?",opts:["Hans Berger","Wilder Penfield","Hans Selye","Santiago Ramón y Cajal"],a:0,ex:"<b>Hans Berger</b>, early 20th century."},
+      {q:"EEG signals mainly come from which cells?",opts:["Pyramidal neurons","Purkinje cells","Schwann cells","Astrocytes"],a:0,ex:"Synchronized <b>pyramidal neurons</b> in the cortex."},
+      {q:"Which two EEG features are most important intraoperatively?",opts:["Frequency and symmetry","Amplitude and color","Impedance and voltage","Latency and montage"],a:0,ex:"<b>Frequency and symmetry</b> — amplitude alone is less reliable."},
+      {q:"Order the perfusion states best → worst.",opts:["Normal → Oligemia → Ischemia → Infarction","Normal → Ischemia → Oligemia → Infarction","Oligemia → Normal → Infarction → Ischemia","Infarction → Ischemia → Oligemia → Normal"],a:0,ex:"A gradual dimmer switch: <b>Normal → Oligemia → Ischemia → Infarction</b>."},
+      {q:"What is the FIRST EEG sign of cerebral ischemia?",opts:["Loss of fast (beta) frequencies","Immediate flatline","Increased amplitude","No change ever"],a:0,ex:"Fast activity is metabolically expensive, so it <b>fades first</b>."},
+      {q:"SSEP evaluates which pathway?",opts:["Ascending sensory","Descending motor","Auditory brainstem","Peripheral nerve only"],a:0,ex:"SSEP = <b>ascending sensory</b> (signal travels up to the brain)."},
+      {q:"Anesthesia-related EEG slowing tends to be…",opts:["Global and symmetric","Focal and one-sided","Random and untimed","Only in the occiput"],a:0,ex:"Anesthesia = <b>global/symmetric</b>; ischemia = focal/asymmetric."}
+    ],
+    cheat:[
+      {h:"Ischemia progression", headers:["State","EEG"], rows:[
+        ["Normal perfusion","Healthy pattern"],
+        ["Oligemia / early","Subtle slowing, loss of fast activity"],
+        ["Ischemia","Prominent slowing (delta predominance)"],
+        ["Infarction","Profound suppression / flatline"]]},
+      {h:"EEG frequency bands", headers:["Band","State"], rows:[
+        ["Beta 13–30 Hz","Alert / active"],
+        ["Alpha 8–13 Hz","Awake, relaxed"],
+        ["Theta 4–8 Hz","Drowsy / light sleep"],
+        ["Delta 0.5–4 Hz","Deep sleep / deep anesthesia / severe ischemia"]],
+        hook:"Fast → slow: <span class='hl'>Beta, Alpha, Theta, Delta</span> = “Busy Alert Then Drowsy.”"},
+      {h:"Anesthesia vs. ischemia", headers:["Anesthesia","Ischemia"], rows:[
+        ["Global / symmetric","Focal / asymmetric"],
+        ["Drug-timed","Surgical-event-timed"],
+        ["Reversible w/ drug change","Unresponsive to drug change"]],
+        hook:"Symmetric + drug-timed = <span class='hl'>anesthesia</span>. Focal + event-timed = <span class='hl'>real injury</span>."},
+      {h:"Modality → function", headers:["Modality","Tests"], rows:[
+        ["EEG","Cortical electrical activity"],["SSEP","Ascending sensory"],["TcMEP","Descending motor"],
+        ["BAEP","Brainstem auditory"],["EMG","Peripheral nerve"]]}
+    ]
+  },
+  {
+    id:"meds",
+    title:"Anesthesia & Medications",
+    sub:"Agents and their effects on evoked potentials & EEG",
+    source:"Week 2 anesthetic-considerations worksheet + standard NCS/IONM pharmacology.",
+    cards:[
+      ["Volatile","Isoflurane / Sevoflurane — effect on signals?","Volatile agents: <span class='hl'>strongly suppress TcMEP & cortical SSEP</span> (dose-dependent)."],
+      ["Volatile","Nitrous oxide — special BAEP caution?","Can build up in the <span class='hl'>middle ear</span>, changing eardrum pressure and the BAEP response."],
+      ["MAC","MAC values: N₂O / Iso / Sevo?","N₂O <span class='hl'>~105%</span>, Isoflurane <span class='hl'>~1.2%</span>, Sevoflurane <span class='hl'>~2.0%</span>."],
+      ["IV","Propofol — why the TIVA mainstay?","GABA-A agonist; <span class='hl'>mild</span> signal suppression vs. gas. High-dose bolus → burst suppression."],
+      ["IV","Etomidate & Ketamine — unusual effect?","They can <span class='hl'>increase/preserve</span> evoked-potential amplitude."],
+      ["IV","Opioids (fentanyl/remifentanil) — effect?","<span class='hl'>Minimal</span> effect on evoked potentials."],
+      ["NMB","Succinylcholine TOF pattern?","Depolarizing: <span class='hl'>no fade</span> — all 4 twitches equal."],
+      ["NMB","Rocuronium/vecuronium TOF pattern?","Non-depolarizing: <span class='hl'>fade</span> — twitches weaken."],
+      ["NMB","Why minimize paralytics for TcMEP?","They block <span class='hl'>EMG, CMAP, and TcMEP</span> — all need a working muscle."],
+      ["Waves","D-wave vs. I-wave sensitivity?","D-wave <span class='hl'>resistant</span> (direct); I-wave <span class='hl'>sensitive</span> (synaptic)."],
+      ["Order","Most → least anesthesia-sensitive?","<span class='hl'>TcMEP → cortical SSEP → BAEP</span>."]
+    ],
+    quiz:[
+      {q:"Which agents most strongly suppress TcMEPs?",opts:["Volatile/inhalational agents","Opioids","Ketamine","Etomidate"],a:0,ex:"<b>Gas agents</b> suppress motor signals heavily — hence TIVA."},
+      {q:"Approx MAC of nitrous oxide?",opts:["~105%","~1.2%","~2.0%","~50%"],a:0,ex:"N₂O ≈ <b>105%</b>."},
+      {q:"Why is propofol preferred for TcMEP cases?",opts:["It suppresses signals far less than gas","It paralyzes muscle","It boosts blood pressure","It has no CNS effect"],a:0,ex:"Propofol allows a reliable MEP; gas would flatten it."},
+      {q:"Which two IV agents can INCREASE evoked-potential amplitude?",opts:["Etomidate and ketamine","Fentanyl and propofol","Sevoflurane and N₂O","Rocuronium and succinylcholine"],a:0,ex:"<b>Etomidate & ketamine</b> — the signal-friendly exceptions."},
+      {q:"TOF fade is characteristic of…",opts:["Non-depolarizing blockers","Depolarizing blockers","Opioids","Volatile agents"],a:0,ex:"Non-depolarizing (rocuronium) = <b>fade</b>; succinylcholine = no fade."},
+      {q:"Is the D-wave sensitive or resistant to anesthesia?",opts:["Resistant","Sensitive","Blocked entirely","Only affected by opioids"],a:0,ex:"“D is Durable” — <b>resistant</b>; the I-wave is sensitive."},
+      {q:"Most anesthesia-sensitive evoked potential?",opts:["TcMEP","BAEP","Subcortical SSEP","Peripheral SSEP"],a:0,ex:"<b>TcMEP</b> is the most sensitive; BAEP the most resistant."}
+    ],
+    cheat:[
+      {h:"MAC values", headers:["Agent","MAC"], rows:[["Nitrous oxide","~105%"],["Isoflurane","~1.2%"],["Sevoflurane","~2.0%"]]},
+      {h:"Agent effect on signals", headers:["Agent","Effect"], rows:[
+        ["Volatile / N₂O","Strong suppression (esp. TcMEP)"],
+        ["Propofol","Mild suppression — TIVA base"],
+        ["Etomidate / Ketamine","Can increase amplitude"],
+        ["Opioids","Minimal effect"]]},
+      {h:"Neuromuscular blockers", headers:["Type","TOF"], rows:[
+        ["Succinylcholine (depolarizing)","No fade — twitches equal"],
+        ["Rocuronium (non-depolarizing)","Fade — twitches weaken"]],
+        hook:"Paralytics quiet muscle noise (helps SEP) but wipe out anything needing muscle: <span class='hl'>EMG, CMAP, TcMEP</span>."},
+      {h:"Sensitivity order", hook:"Most → least sensitive: <span class='hl'>TcMEP → cortical SSEP → subcortical/peripheral SSEP → BAEP</span> (watch N₂O for BAEP)."},
+      {h:"D-wave vs I-wave", hook:"“<span class='hl'>D is Durable</span>” — D-wave resists anesthesia; I-wave is synaptic and sensitive."}
+    ]
+  },
+  {
+    id:"ncs",
+    title:"Upper Extremity NCS",
+    sub:"Median · Ulnar · Radial — setup & terminology",
+    source:"“Upper Extremity NCS,” NDT 204 deck (L. Kelly); Buschbacher & Prahlow; Crout & Flicek 2005; NIOSH 1990; Preston & Shapiro 1998.",
+    cards:[
+      ["Median","Median motor — active electrode?","Belly of the <span class='hl'>APB</span> (thenar)."],
+      ["Median","Median motor — wrist stim site?","<span class='hl'>8 cm</span> proximal, between <span class='hl'>FCR & palmaris longus</span>."],
+      ["Median","Median sensory (ortho) — record where?","<span class='hl'>14 cm</span> proximal between FCR & PL; ref 2–3 cm further."],
+      ["Ulnar","Ulnar motor — active electrode?","Belly of the <span class='hl'>ADM</span> (hypothenar)."],
+      ["Ulnar","Ulnar motor — 3 stim sites?","<span class='hl'>Wrist (8cm) → below elbow → above elbow (10cm)</span>."],
+      ["Ulnar","Ulnar sensory (ortho) — record where?","<span class='hl'>14 cm</span> proximal, adjacent to the <span class='hl'>FCU tendon</span>."],
+      ["Radial","Superficial radial sensory — active?","<span class='hl'>Anatomical snuff box</span>; ref 3–4 cm distal."],
+      ["Radial","Which nerve is sensory-only here?","The <span class='hl'>radial</span> nerve."],
+      ["Terminology","Cathode vs anode (standard study)?","<span class='hl'>Cathode distal, anode proximal</span>; depolarization under cathode."],
+      ["Terminology","Exception to anode-proximal rule?","<span class='hl'>F-waves and H-waves</span>."],
+      ["Terminology","Orthodromic vs antidromic?","Ortho = normal direction (sensory: stim finger, record wrist). Antidromic = opposite."],
+      ["Terminology","Motor vs sensory reference placement?","Motor: <span class='hl'>off the belly</span> on bone/tendon. Sensory: both <span class='hl'>on the same plane</span> over the nerve."],
+      ["Clinical","Detect early CTS — which comparison & cutoff?","<span class='hl'>Median vs ulnar palmar</span> peak latency; normal < <span class='hl'>0.4 ms</span>."]
+    ],
+    quiz:[
+      {scen:"Setting up a median motor study.",q:"Where does the active recording electrode go?",opts:["Belly of the APB","Belly of the ADM","Anatomical snuff box","Over the brachial pulse"],a:0,ex:"Median motor → <b>APB</b>. ADM is ulnar; snuff box is radial."},
+      {scen:"Median motor, wrist stimulation.",q:"Distance & landmarks for the wrist site?",opts:["8 cm, between FCR and palmaris longus","14 cm, next to FCU","3–4 cm on a tendon","10 cm between biceps & triceps"],a:0,ex:"Median wrist site = <b>8 cm</b>, between FCR & PL."},
+      {scen:"Ulnar motor study.",q:"Active recording electrode over which muscle?",opts:["ADM","APB","First dorsal interosseous","FCU"],a:0,ex:"Ulnar motor → <b>ADM</b> (hypothenar)."},
+      {scen:"Ulnar motor, multi-site.",q:"Correct stimulation sequence?",opts:["Wrist → below elbow → above elbow","Wrist → antecubital → axilla","Snuff box → forearm → elbow","Palm → wrist → elbow"],a:0,ex:"<b>Wrist (8cm) → below elbow → above elbow (10cm)</b> brackets the elbow."},
+      {scen:"Direction of recording.",q:"Which is ORTHODROMIC for median sensory?",opts:["Stim index finger, record at wrist","Stim wrist, record at digit","Both at wrist","Stim elbow, record snuff box"],a:0,ex:"Ortho = normal direction: <b>stim distal, record proximal</b>."},
+      {scen:"Radial study.",q:"Superficial radial sensory active electrode?",opts:["Anatomical snuff box","APB belly","5th finger","Wrist crease"],a:0,ex:"Records at the <b>snuff box</b>."},
+      {scen:"Polarity check.",q:"Standard cathode/anode arrangement?",opts:["Cathode distal, anode proximal","Cathode proximal, anode distal","Both same point","Cathode on bone"],a:0,ex:"<b>Cathode distal, anode proximal</b> (except F/H waves)."},
+      {scen:"Early CTS workup.",q:"Which comparison + normal cutoff?",opts:["Median vs ulnar palmar, <0.4 ms","Median vs radial, <4 ms","Ulnar motor vs F-wave, <1 ms","Ortho vs antidromic, =8 ms"],a:0,ex:"<b>Median vs ulnar palmar</b>; normal difference <b>< 0.4 ms</b>."}
+    ],
+    cheat:[
+      {h:"Recording targets", headers:["Study","Active electrode"], rows:[
+        ["Median motor","Belly of APB"],["Ulnar motor","Belly of ADM"],
+        ["Median sensory","14 cm proximal, FCR–PL"],["Ulnar sensory","14 cm proximal, by FCU"],
+        ["Radial sensory","Anatomical snuff box"]]},
+      {h:"Stim distances", headers:["Study","Distance"], rows:[
+        ["Median/ulnar motor wrist","8 cm"],["Median/ulnar sensory","14 cm"],
+        ["Ulnar above-elbow","10 cm"],["Radial sensory","10 cm"]]},
+      {h:"Key rules", hook:"Cathode <span class='hl'>distal</span>, anode <span class='hl'>proximal</span> (except F/H). Ortho = stim distal / record proximal; antidromic = opposite. Radial = <span class='hl'>sensory only</span>."},
+      {h:"Early CTS", hook:"Median vs ulnar <span class='hl'>palmar</span> peak latency; normal difference <span class='hl'>< 0.4 ms</span>."}
+    ]
+  }
+  ,{
+    id:"lowerncs",
+    title:"Lower Extremity NCS",
+    sub:"Peroneal · Tibial · Sural · Superficial Peroneal",
+    source:"“Lower Extremity NCS,” NDT 204 deck; Buschbacher & Prahlow; Crout & Flicek 2005; NIOSH 1990; Preston & Shapiro 1998; Hammer 1982.",
+    cards:[
+      ["Nerves","Which LE nerves are studied for MOTOR?","<span class='hl'>Peroneal</span> (EDB & anterior tibialis) and <span class='hl'>tibial</span>."],
+      ["Nerves","Which LE nerves are studied for SENSORY?","<span class='hl'>Sural</span> and <span class='hl'>superficial peroneal sensory</span>."],
+      ["Sural","Sural sensory — active electrode location?","Posterior to the <span class='hl'>lateral malleolus</span>, between it and the Achilles tendon; reference 3 cm distal."],
+      ["Sural","Sural sensory — stimulation site?","<span class='hl'>12–14 cm proximal</span> on the posterolateral calf, cathode distal."],
+      ["Peroneal","Peroneal motor (EDB) — active electrode?","Belly of the <span class='hl'>EDB</span>, ~3 fingerbreadths from the lateral malleolus; reference at base of 5th toe."],
+      ["Peroneal","Peroneal motor (EDB) — 3 stim sites?","<span class='hl'>Ankle (8 cm)</span>, <span class='hl'>below fibular head</span>, <span class='hl'>popliteal fossa (10 cm above fibular head)</span>."],
+      ["Peroneal","Peroneal motor (AT) — active electrode?","Over the <span class='hl'>anterior tibialis</span>, ~4 fingerbreadths distal & 2 medial to the fibular head, lateral to the tibia."],
+      ["Peroneal","Superficial peroneal sensory — active electrode?","Just above the junction of the <span class='hl'>lateral third</span> of a line connecting the malleoli; ref 3 cm distal."],
+      ["Peroneal","Superficial peroneal sensory — stim site?","<span class='hl'>10–12 cm proximal</span> to the active electrode, lateral to the tibia."],
+      ["Tibial","Posterior tibial motor — active electrode?","Over the belly of the <span class='hl'>abductor hallucis (AH)</span>, just below & anterior to the navicular."],
+      ["Tibial","Posterior tibial motor — stim sites?","<span class='hl'>Ankle</span> (posterior/proximal to medial malleolus, 8 cm) and <span class='hl'>popliteal fossa</span>."],
+      ["Terminology","Motor vs sensory reference placement (LE)?","Motor: reference <span class='hl'>off the belly</span> on bone/tendon. Sensory: both electrodes <span class='hl'>on the same plane</span> over the nerve."]
+    ],
+    quiz:[
+      {scen:"Sural sensory study.",q:"Where is the active recording electrode?",opts:["Posterior to the lateral malleolus","Over the EDB belly","Popliteal fossa","Base of the great toe"],a:0,ex:"Sural records <b>posterior to the lateral malleolus</b>, between it and the Achilles tendon."},
+      {scen:"Sural sensory setup.",q:"Stimulation distance & cathode orientation?",opts:["12–14 cm proximal, cathode distal","8 cm proximal, cathode proximal","3 cm distal","10 cm below fibular head"],a:0,ex:"<b>12–14 cm proximal</b> on the posterolateral calf, cathode distal."},
+      {scen:"Peroneal motor to EDB.",q:"Active electrode location?",opts:["EDB belly, ~3 fingerbreadths from lateral malleolus","Anterior tibialis","Abductor hallucis","Base of 5th toe"],a:0,ex:"Active over the <b>EDB belly</b>; the base of the 5th toe is the reference."},
+      {scen:"Peroneal motor (EDB) three-site study.",q:"Which lists the correct sites?",opts:["Ankle (8cm) → below fibular head → popliteal fossa","Wrist → elbow → axilla","Medial malleolus → arch → knee","Snuff box → forearm → elbow"],a:0,ex:"<b>Ankle (8 cm) → below fibular head → popliteal fossa (10 cm above fibular head)</b>."},
+      {scen:"Posterior tibial motor study.",q:"Active recording electrode is over which muscle?",opts:["Abductor hallucis (AH)","EDB","Anterior tibialis","Soleus"],a:0,ex:"Posterior tibial motor records over the <b>abductor hallucis</b>."},
+      {scen:"Superficial peroneal sensory.",q:"Where is the active electrode placed?",opts:["Junction of the lateral third of a line between the malleoli","Snuff box","Posterior to lateral malleolus","Popliteal fossa"],a:0,ex:"At the <b>lateral third junction</b> of a line connecting the malleoli."},
+      {scen:"Identifying modalities.",q:"Which pair are the LE SENSORY studies?",opts:["Sural & superficial peroneal","Peroneal & tibial","Femoral & saphenous","EDB & AH"],a:0,ex:"<b>Sural</b> and <b>superficial peroneal sensory</b> are the routine LE sensory studies."}
+    ],
+    cheat:[
+      {h:"Recording targets", headers:["Study","Active electrode"], rows:[
+        ["Sural sensory","Post. to lateral malleolus"],
+        ["Peroneal motor (EDB)","EDB belly"],
+        ["Peroneal motor (AT)","Anterior tibialis"],
+        ["Sup. peroneal sensory","Lateral-third malleolar line"],
+        ["Post. tibial motor","Abductor hallucis (AH)"]]},
+      {h:"Stim distances", headers:["Study","Distance"], rows:[
+        ["Sural sensory","12–14 cm"],
+        ["Peroneal/tibial motor ankle","8 cm"],
+        ["Sup. peroneal sensory","10–12 cm"],
+        ["Popliteal fossa (peroneal)","10 cm above fibular head"]]},
+      {h:"Key rule", hook:"Same as UE: motor reference <span class='hl'>off the belly</span> (bone/tendon); sensory electrodes <span class='hl'>on the same plane</span> over the nerve. Cathode distal (except F/H waves)."}
+    ]
+  }
+  ,{
+    id:"leanatomy",
+    title:"Lower Extremity Anatomy",
+    sub:"Plexus, roots & nerve innervations",
+    source:"“Lower Extremity Anatomy,” NDT 204 deck; Crout & Flicek 2005; Preston & Shapiro 1998.",
+    cards:[
+      ["Roots","How many pairs of spinal nerves, and the breakdown?","<span class='hl'>31 pairs</span>: 8 cervical, 12 thoracic, 5 lumbar, 5 sacral, 1 coccygeal."],
+      ["Plexus","Lumbar vs sacral plexus root levels?","Lumbar <span class='hl'>L2–L4</span>; sacral <span class='hl'>L4–S3</span>."],
+      ["Plexus","Two main nerves of the lumbosacral plexus & roots?","<span class='hl'>Femoral</span> (L2–L4) and <span class='hl'>sciatic</span> (L5–S2)."],
+      ["Femoral","Femoral nerve — roots & what it innervates?","<span class='hl'>L2–L4</span>; innervates the <span class='hl'>quadriceps</span> (vastus medialis/lateralis/intermedius, rectus femoris)."],
+      ["Saphenous","Saphenous nerve — origin & function?","Distal <span class='hl'>sensory branch of the femoral</span> (L3–L4); sensory to kneecap, medial lower leg, medial foot to base of big toe."],
+      ["LFCN","Lateral femoral cutaneous nerve — roots & syndrome?","<span class='hl'>L2–L3</span>, NOT from the femoral nerve; entrapment = <span class='hl'>meralgia paresthetica</span>."],
+      ["Sciatic","Sciatic nerve — roots & where it divides?","<span class='hl'>L5–S2</span>; divides at the <span class='hl'>popliteal fossa</span> into common peroneal and posterior tibial."],
+      ["Peroneal","Common peroneal — roots & branches?","<span class='hl'>L4, L5, S1</span>; bifurcates into <span class='hl'>deep</span> and <span class='hl'>superficial</span> peroneal nerves."],
+      ["Peroneal","Deep peroneal nerve — innervates?","Anterior tibialis, EDL, EHL, EDB (<span class='hl'>L4, L5, S1</span>)."],
+      ["Peroneal","Superficial peroneal nerve — motor & sensory?","Motor: peroneus longus & brevis. Sensory: mid/lower anterolateral calf & dorsum of foot (<span class='hl'>L5, S1</span>)."],
+      ["Tibial","Posterior tibial nerve — innervation & bifurcation?","Gastrocnemius, soleus, posterior tibialis; bifurcates into <span class='hl'>medial & lateral plantar</span> nerves."],
+      ["Plantar","Medial vs lateral plantar — motor muscles?","Medial → <span class='hl'>abductor hallucis (AH)</span>; lateral → <span class='hl'>abductor digiti quinti pedis (ADQP)</span>."],
+      ["Sural","Sural nerve — roots & origin?","<span class='hl'>S1–S2</span>; formed from tibial & peroneal sensory branches; sensation to lower lateral leg & lateral foot."]
+    ],
+    quiz:[
+      {q:"How many pairs of spinal nerves are there?",opts:["31","24","28","33"],a:0,ex:"<b>31 pairs</b>: 8C, 12T, 5L, 5S, 1 coccygeal."},
+      {q:"Root levels of the femoral nerve?",opts:["L2–L4","L5–S2","L4–S3","S1–S2"],a:0,ex:"Femoral = <b>L2–L4</b>, innervates quadriceps."},
+      {q:"The sciatic nerve divides into which two nerves, and where?",opts:["Common peroneal & posterior tibial, at the popliteal fossa","Femoral & saphenous, at the inguinal ligament","Deep & superficial peroneal, at the ankle","Medial & lateral plantar, at the arch"],a:0,ex:"Sciatic (L5–S2) splits at the <b>popliteal fossa</b> into common peroneal + posterior tibial."},
+      {q:"Entrapment of which nerve causes meralgia paresthetica?",opts:["Lateral femoral cutaneous","Saphenous","Sural","Deep peroneal"],a:0,ex:"The <b>lateral femoral cutaneous nerve</b> (L2–L3) — not a femoral branch."},
+      {q:"The deep peroneal nerve innervates all EXCEPT:",opts:["Peroneus longus","Anterior tibialis","Extensor digitorum longus","Extensor hallucis longus"],a:0,ex:"Peroneus longus is <b>superficial</b> peroneal; deep peroneal does AT, EDL, EHL, EDB."},
+      {q:"Which nerve is the distal sensory branch of the femoral nerve?",opts:["Saphenous","Sural","Superficial peroneal","Lateral plantar"],a:0,ex:"The <b>saphenous nerve</b> (L3–L4)."},
+      {q:"The posterior tibial nerve bifurcates into…",opts:["Medial & lateral plantar nerves","Deep & superficial peroneal","Common peroneal & sural","Femoral & saphenous"],a:0,ex:"Into the <b>medial and lateral plantar</b> nerves."}
+    ],
+    cheat:[
+      {h:"Plexus root levels", headers:["Structure","Roots"], rows:[
+        ["Lumbar plexus","L2–L4"],["Sacral plexus","L4–S3"],
+        ["Femoral nerve","L2–L4"],["Sciatic nerve","L5–S2"],
+        ["Common peroneal","L4, L5, S1"],["Sural nerve","S1–S2"]]},
+      {h:"Who innervates what", headers:["Nerve","Innervation"], rows:[
+        ["Femoral","Quadriceps"],
+        ["Saphenous","Sensory: medial leg/foot"],
+        ["Deep peroneal","AT, EDL, EHL, EDB"],
+        ["Superficial peroneal","Peroneus longus/brevis; dorsum of foot"],
+        ["Post. tibial","Gastroc, soleus, post. tibialis → plantar nn."],
+        ["Medial plantar","Abductor hallucis (AH)"],
+        ["Lateral plantar","Abductor digiti quinti pedis (ADQP)"]]},
+      {h:"Don't mix up", hook:"The <span class='hl'>lateral femoral cutaneous</span> nerve is NOT a femoral branch — its entrapment causes <span class='hl'>meralgia paresthetica</span>."}
+    ]
+  }
+  ,{
+    id:"abnormalncs",
+    title:"Abnormal NCS",
+    sub:"Neuropathies, F-waves, H-reflex, NMJ & myopathy",
+    source:"“Abnormal NCS,” NDT 204 deck; Crout & Flicek 2005; NIOSH 1990; Preston & Shapiro 1998; Hammer 1982.",
+    cards:[
+      ["Criteria","Three criteria for a normal NCS response?","<span class='hl'>Latency, amplitude, and conduction velocity</span> (with side-to-side comparison)."],
+      ["Types","Mono- vs poly- vs radiculopathy?","Mononeuropathy = <span class='hl'>one nerve</span>; polyneuropathy = <span class='hl'>many nerves</span>; radiculopathy = at the <span class='hl'>spinal root</span>."],
+      ["Severity","Neurapraxia vs axonotmesis vs neurotmesis?","Neurapraxia = compression, <span class='hl'>no axonal disruption</span>. Axonotmesis = axon <span class='hl'>disrupted</span> (can regenerate). Neurotmesis = <span class='hl'>severed</span> nerve."],
+      ["Types","Axonal vs demyelinating — NCS findings?","Axonal = <span class='hl'>reduced amplitude</span>. Demyelinating = <span class='hl'>slowed velocity & prolonged latency</span>."],
+      ["Poly","Diabetic polyneuropathy — pattern & finding?","Axonal sensorimotor, <span class='hl'>stocking-glove</span> pattern; NCS shows <span class='hl'>decreased amplitudes</span>."],
+      ["Poly","GBS (AIDP) — presentation & NCS?","Fast <span class='hl'>ascending weakness</span>; decreased amplitudes, slowed velocities, prolonged/absent <span class='hl'>F-waves</span>, proximal segments affected."],
+      ["Fwave","What is an F-wave?","A <span class='hl'>late, pure motor</span> response that studies the <span class='hl'>proximal</span> nerve segment."],
+      ["Fwave","F-wave normal values (UE vs LE)?","UE ~<span class='hl'>32 ms</span>; LE ~<span class='hl'>56 ms</span>."],
+      ["Fwave","F-wave technical factors?","Anode <span class='hl'>distal</span> (anodal block), distal stim site, <span class='hl'>supramaximal</span> stim, know limb length, increased sensitivity & timebase."],
+      ["CMT","Charcot-Marie-Tooth (HMSN) — hallmark?","<span class='hl'>Extremely slow</span> conduction (≈10 m/s LE, 20 m/s UE), symmetrical, prolonged latencies."],
+      ["ALS","ALS — what does it affect?","<span class='hl'>Motor neurons only</span> (anterior horn cells); no sensory findings; upper & lower motor neuron signs."],
+      ["Radic","C6 vs C7 radiculopathy signs?","C6: thumb/index sensory loss, <span class='hl'>biceps</span> weakness. C7: index/middle finger, <span class='hl'>triceps</span> weakness."],
+      ["Radic","L5 vs S1 radiculopathy signs?","L5: anterolateral leg/dorsum of foot, <span class='hl'>foot drop</span>. S1: lateral ankle/heel/sole, <span class='hl'>gastroc</span> weakness."],
+      ["Hreflex","What is the H-reflex equivalent to?","The electrical equivalent of an <span class='hl'>ankle jerk</span>; records over the <span class='hl'>soleus</span> (S1)."],
+      ["Hreflex","H-reflex vs F-wave key differences?","H = sensory+motor, <span class='hl'>submaximal</span> stim, consistent latency. F = pure motor, <span class='hl'>supramaximal</span>, variable latency. Both cathode proximal."],
+      ["NMJ","NMJ neurotransmitter & where stored?","<span class='hl'>Acetylcholine</span>, stored in synaptic vesicles."],
+      ["NMJ","Presynaptic vs postsynaptic NMJ diseases?","Presynaptic: <span class='hl'>Lambert-Eaton</span>, botulism (release). Postsynaptic: <span class='hl'>Myasthenia gravis</span> (receptors)."],
+      ["NMJ","LEMS vs MG on repetitive stim & exercise?","LEMS: low amplitudes that <span class='hl'>increase</span> post-exercise (increment). MG: <span class='hl'>decrement</span> on RNS, worsens with exercise."],
+      ["Myopathy","Myopathy — key features?","Weakness from muscle fiber abnormality (<span class='hl'>nerves normal</span>); motor, bilateral & proximal>distal; <span class='hl'>EMG</span> more useful than NCS."]
+    ],
+    quiz:[
+      {q:"Which finding indicates an AXONAL neuropathy?",opts:["Reduced amplitude","Slowed conduction velocity","Prolonged latency","Conduction block"],a:0,ex:"Axonal loss → <b>reduced amplitude</b>. Demyelination → slowing/prolonged latency."},
+      {q:"Which finding indicates a DEMYELINATING neuropathy?",opts:["Slowed velocity & prolonged latency","Reduced amplitude only","Normal everything","Increased amplitude"],a:0,ex:"Demyelination → <b>slowed velocity, prolonged latency</b>."},
+      {q:"Neurapraxia is best described as…",opts:["Compression with no axonal disruption","A severed nerve","Axon crush with regeneration","Complete transection"],a:0,ex:"<b>Neurapraxia</b> = compression, axon intact. Axonotmesis = disrupted; neurotmesis = severed."},
+      {q:"GBS (AIDP) classically presents with…",opts:["Ascending weakness","Descending weakness","Pure sensory loss","Ocular fatigue"],a:0,ex:"<b>Ascending weakness</b>, often post-viral, with F-wave changes."},
+      {q:"Approximate normal UPPER extremity F-wave latency?",opts:["~32 ms","~56 ms","~10 ms","~90 ms"],a:0,ex:"UE ~<b>32 ms</b>; LE ~56 ms."},
+      {q:"Charcot-Marie-Tooth is characterized by…",opts:["Extremely slow, symmetrical conduction velocities","Reduced amplitude only","Normal studies","Pure NMJ decrement"],a:0,ex:"CMT (HMSN): <b>very slow velocities</b> (~10 LE / 20 UE m/s), symmetrical."},
+      {q:"ALS affects which structures?",opts:["Motor neurons only (anterior horn cells)","Sensory nerves only","The NMJ only","Muscle fibers only"],a:0,ex:"<b>Motor neurons only</b> — no sensory findings."},
+      {q:"S1 radiculopathy typically causes weakness of…",opts:["Gastrocnemius","Quadriceps","Biceps","Triceps"],a:0,ex:"S1 → <b>gastroc</b> weakness, sensory loss over lateral ankle/heel/sole."},
+      {q:"Lambert-Eaton (LEMS) on repetitive stim shows…",opts:["Amplitude INCREASE after exercise","Decrement that worsens with exercise","No change","Prolonged latency only"],a:0,ex:"LEMS is <b>presynaptic</b>: low amplitudes that increase 100–400% post-exercise."},
+      {q:"Myasthenia gravis on RNS shows…",opts:["A decremental response","An incremental response","Slowed velocity","Reduced sensory amplitude"],a:0,ex:"MG is <b>postsynaptic</b>: <b>decrement</b> on RNS, worsens with exercise."},
+      {q:"The H-reflex is the electrical equivalent of…",opts:["An ankle jerk","A knee jerk","A biceps reflex","The gag reflex"],a:0,ex:"H-reflex ≈ <b>ankle jerk</b>; recorded over the soleus (S1)."},
+      {q:"Compared to F-waves, H-reflexes use…",opts:["Submaximal stimulation with consistent latency","Supramaximal stimulation with variable latency","No stimulation","Anode proximal only"],a:0,ex:"H = <b>submaximal, consistent latency</b> (sensory+motor). F = supramaximal, variable, pure motor."}
+    ],
+    cheat:[
+      {h:"Axonal vs demyelinating", headers:["Type","NCS finding"], rows:[
+        ["Axonal","Reduced amplitude"],
+        ["Demyelinating","Slowed velocity, prolonged latency"]]},
+      {h:"Nerve injury severity", headers:["Term","Meaning"], rows:[
+        ["Neurapraxia","Compression, no axon disruption"],
+        ["Axonotmesis","Axon disrupted, can regenerate"],
+        ["Neurotmesis","Severed nerve"]]},
+      {h:"F-wave vs H-reflex", headers:["F-wave","H-reflex"], rows:[
+        ["Pure motor","Sensory + motor"],
+        ["Supramaximal stim","Submaximal, long duration"],
+        ["Variable latency","Consistent latency"],
+        ["UE ~32 ms / LE ~56 ms","≈ ankle jerk (soleus, S1)"]]},
+      {h:"NMJ diseases", headers:["Location","Disease / RNS"], rows:[
+        ["Presynaptic","LEMS (increment post-exercise), botulism"],
+        ["Postsynaptic","Myasthenia gravis (decrement)"]],
+        hook:"LEMS <span class='hl'>increments</span> (better with exercise); MG <span class='hl'>decrements</span> (worse with exercise)."},
+      {h:"Radiculopathy quick map", headers:["Root","Sign"], rows:[
+        ["C6","Thumb/index; biceps weakness"],
+        ["C7","Index/middle; triceps weakness"],
+        ["L4","Shin/medial leg; quad weakness"],
+        ["L5","Dorsum of foot; foot drop"],
+        ["S1","Lateral ankle/sole; gastroc weakness"]]}
+    ]
+  }
+  ,{
+    id:"uncommonncs",
+    title:"Uncommon NCS",
+    sub:"Less-common UE/LE nerve studies + F-waves & H-reflex",
+    source:"“Uncommon NCS,” NDT 204 deck; Crout & Flicek 2005; NIOSH 1990; Preston & Shapiro 1998; Hammer 1982.",
+    cards:[
+      ["DUC","Dorsal ulnar cutaneous — why useful?","Helps localize an ulnar lesion at the wrist: it stays <span class='hl'>normal in Guyon's canal lesions</span> because it branches off before the wrist."],
+      ["DUC","Dorsal ulnar cutaneous — active electrode?","Dorsum of the hand, between the <span class='hl'>4th and 5th metacarpals</span>; ref 3 cm distal."],
+      ["FDIO","Ulnar motor–FDIO — what does it evaluate?","The <span class='hl'>deep motor branch</span> of the ulnar nerve; useful in Guyon's canal & elbow lesions."],
+      ["FDIO","Ulnar motor–FDIO — active electrode?","Over the <span class='hl'>first dorsal interosseous</span>, in the web space between thumb & index finger."],
+      ["Radial","Radial motor — active electrode?","Over the <span class='hl'>EIP</span> muscle in the forearm, ~4 fingerbreadths proximal to the ulnar styloid; ref on the styloid."],
+      ["Radial","Radial motor — 3 stim sites?","Forearm (over ulna, 4–6 cm), <span class='hl'>below the spiral groove</span>, and <span class='hl'>above the spiral groove</span>."],
+      ["Axillary","Axillary nerve — active electrode & stim?","Over the <span class='hl'>deltoid</span>; stimulate at the <span class='hl'>axilla and Erb's point</span> (side-to-side comparison)."],
+      ["Musculocut","Musculocutaneous nerve — active electrode & stim?","Over the <span class='hl'>biceps</span>; stimulate at the <span class='hl'>axilla and Erb's point</span>."],
+      ["Spinal Acc","Spinal accessory — active electrode & stim?","<span class='hl'>Mid-to-upper trapezius</span>; stimulate posterior to the <span class='hl'>SCM</span>. Used for RNS."],
+      ["Femoral","Femoral motor — active electrode?","Over the <span class='hl'>rectus femoris</span> (any quad), halfway between inguinal crease and knee; ref on kneecap."],
+      ["Femoral","Femoral motor — stim site?","Middle of the inguinal area, slightly <span class='hl'>lateral to the femoral pulse</span>, below the inguinal ligament (side-to-side)."],
+      ["Saphenous","Saphenous nerve — stim site?","<span class='hl'>14 cm proximal</span> to the active electrode, between the tibia and medial gastrocnemius."],
+      ["Hreflex","H-reflex stimulation polarity?","Reversed — <span class='hl'>cathode proximal</span>, submaximal, increased stimulus duration (1.0 ms), at the popliteal fossa."]
+    ],
+    quiz:[
+      {scen:"Suspected ulnar lesion at Guyon's canal.",q:"Which study should stay NORMAL, helping localize it?",opts:["Dorsal ulnar cutaneous","Ulnar motor–ADM","Median sensory","Radial motor"],a:0,ex:"The <b>dorsal ulnar cutaneous</b> branches off before the wrist, so it's spared in a Guyon's canal lesion."},
+      {scen:"Evaluating the deep motor branch of the ulnar nerve.",q:"Which study & recording muscle?",opts:["Ulnar motor–FDIO (first dorsal interosseous)","Ulnar motor–ADM","Radial motor–EIP","Axillary–deltoid"],a:0,ex:"The <b>FDIO</b> study evaluates the deep ulnar motor branch."},
+      {scen:"Radial motor study.",q:"Active recording electrode is over which muscle?",opts:["Extensor indicis proprius (EIP)","Abductor pollicis brevis","First dorsal interosseous","Deltoid"],a:0,ex:"Radial motor records over the <b>EIP</b>, ~4 fingerbreadths proximal to the ulnar styloid."},
+      {scen:"Axillary nerve study.",q:"Recording site and stimulation points?",opts:["Deltoid; axilla & Erb's point","Biceps; axilla & Erb's point","Trapezius; posterior to SCM","Rectus femoris; inguinal area"],a:0,ex:"Axillary records over the <b>deltoid</b>, stimulated at the axilla and Erb's point."},
+      {scen:"Spinal accessory nerve study.",q:"Recording site and stimulation point?",opts:["Upper trapezius; posterior to the SCM","Deltoid; axilla","Biceps; elbow","Soleus; popliteal fossa"],a:0,ex:"Records over the <b>upper trapezius</b>, stimulated posterior to the SCM; used for RNS."},
+      {scen:"Femoral motor study.",q:"Active recording electrode location?",opts:["Rectus femoris, halfway between inguinal crease and knee","Deltoid belly","Abductor hallucis","EIP in the forearm"],a:0,ex:"Femoral motor records over the <b>rectus femoris</b> (or another quad)."},
+      {scen:"Saphenous nerve study.",q:"Stimulation distance?",opts:["14 cm proximal, between tibia & medial gastroc","8 cm proximal at the ankle","3 cm distal to reference","10 cm below fibular head"],a:0,ex:"Saphenous stim is <b>14 cm proximal</b>, between tibia and medial gastrocnemius."}
+    ],
+    cheat:[
+      {h:"UE uncommon studies", headers:["Study","Active electrode"], rows:[
+        ["Dorsal ulnar cutaneous","Dorsum, 4th–5th metacarpals"],
+        ["Ulnar motor–FDIO","First dorsal interosseous"],
+        ["Radial motor","EIP (forearm)"],
+        ["Axillary","Deltoid"],
+        ["Musculocutaneous","Biceps"],
+        ["Spinal accessory","Upper trapezius"]]},
+      {h:"LE uncommon studies", headers:["Study","Key detail"], rows:[
+        ["Femoral motor","Rectus femoris; stim inguinal, lateral to pulse"],
+        ["Saphenous","Stim 14 cm proximal, tibia–gastroc"],
+        ["H-reflex","Soleus; cathode proximal, submaximal"]]},
+      {h:"Localizing ulnar lesions", hook:"Dorsal ulnar cutaneous <span class='hl'>spared</span> in Guyon's canal (branches off before the wrist); FDIO helps catch deep-branch involvement."}
+    ]
+  }
+  ,{
+    id:"machineterm",
+    title:"Machine Terminology (Instrumentation)",
+    sub:"Ohm's law, sampling, amplifiers & display standards",
+    source:"“Terminology,” C. Eisenberger; ACNS recording guidelines.",
+    cards:[
+      ["Ohm","Ohm's law formula (I×R=E)?","<span class='hl'>Current × Resistance = Voltage</span> (Amps × Ohms = Volts)."],
+      ["Capacitor","What is a capacitor?","A device that <span class='hl'>stores charge / energy</span>."],
+      ["Nyquist","Nyquist criteria?","Sampling rate must be at least <span class='hl'>twice the fastest frequency</span> recorded; 3–4× is ideal (ACNS = 3× the HFF)."],
+      ["Sample","ACNS minimum sample rate rule?","At least <span class='hl'>3× the high-frequency filter</span> — e.g., 100/s for a 35-Hz HFF, 200/s for 70-Hz. Prevents aliasing."],
+      ["Aliasing","What is aliasing?","Distortion when there are <span class='hl'>too few sampled points</span> on the wave for accurate digital conversion."],
+      ["Dwell","What is dwell time?","The <span class='hl'>time between subsequent samples</span> in A-to-D conversion (e.g., 100 Hz = 10 ms apart)."],
+      ["ADC","What does the analog-to-digital converter do?","Turns the analog signal into <span class='hl'>discrete data points</span> at equal time intervals; key concepts = sampling rate & bit resolution."],
+      ["CMRR","Common mode rejection ratio — what & minimum?","How well the differential amplifier rejects external interference; minimum <span class='hl'>90 dB (10,000:1)</span>."],
+      ["Diff Amp","What does a differential amplifier do?","Amplifies the <span class='hl'>difference</span> between G1 and G2 voltages, not the individual voltages."],
+      ["Skew","What is sampling skew, and the fix?","Distortion when channels aren't sampled simultaneously (time lag); reduced by <span class='hl'>burst-mode sampling</span>."],
+      ["Bits","Amplitude resolution — minimum bits?","At least <span class='hl'>16 bits</span> recommended; fewer bits means large changes may go undetected."],
+      ["Display","Standard screen & vertical resolution?","Screen <span class='hl'>1280×1024</span>; horizontal ≥1280 px; vertical ≥16 bits; min 10 mm/channel spacing (up to 21 channels)."],
+      ["Timescale","Standard time scale (paper speed)?","<span class='hl'>30 mm/second</span>."],
+      ["Timescale","When use FAST paper speed (60 mm/s)?","Secondary bilateral synchrony, triphasic time lag, comparing wave duration (spikes vs sharps), muscle vs 60 Hz."],
+      ["Timescale","When use SLOW paper speed (15 mm/s)?","Enhancing periodicity, polysomnography, neonatal EEG, groups of low-voltage slow-wave activity (FIRDA)."]
+    ],
+    quiz:[
+      {q:"Ohm's law: I × R = E means…",opts:["Current × Resistance = Voltage","Current × Voltage = Resistance","Impedance × Rate = Energy","Input × Reference = Error"],a:0,ex:"<b>Amps × Ohms = Volts.</b>"},
+      {q:"The Nyquist criterion requires a sample rate at least…",opts:["Twice the fastest frequency recorded","Half the fastest frequency","Equal to the frequency","Ten times the frequency"],a:0,ex:"At least <b>2×</b> the fastest frequency; ACNS uses 3× the HFF."},
+      {q:"ACNS minimum sampling rate relative to the high-frequency filter?",opts:["3× the HFF","1× the HFF","0.5× the HFF","10× the HFF"],a:0,ex:"<b>3× the HFF</b> (e.g., 100/s for a 35-Hz filter)."},
+      {q:"Aliasing occurs when…",opts:["Too few points are sampled on the wave","Too many channels are used","The gain is too low","The paper speed is 30 mm/s"],a:0,ex:"<b>Under-sampling</b> the waveform causes aliasing."},
+      {q:"Minimum common mode rejection ratio (CMRR)?",opts:["90 dB (10,000:1)","30 dB (100:1)","10 dB (10:1)","120 dB (1,000,000:1)"],a:0,ex:"At least <b>90 dB / 10,000:1</b>."},
+      {q:"A differential amplifier amplifies…",opts:["The difference between G1 and G2","Each input separately","Only the ground signal","The 60 Hz component"],a:0,ex:"It amplifies the <b>difference</b> between the two inputs."},
+      {q:"Recommended minimum amplitude (bit) resolution?",opts:["16 bits","8 bits","4 bits","2 bits"],a:0,ex:"<b>16 bits</b> or higher; fewer bits miss large changes."},
+      {q:"Standard time scale (paper speed)?",opts:["30 mm/second","10 mm/second","100 mm/second","5 mm/second"],a:0,ex:"<b>30 mm/s</b> is standard."},
+      {q:"Which situation calls for a FAST (60 mm/s) paper speed?",opts:["Distinguishing muscle from 60 Hz","Neonatal EEG","Polysomnography","Enhancing periodicity"],a:0,ex:"Fast speed helps with <b>muscle vs 60 Hz</b>, triphasic time lag, spike vs sharp duration, and secondary bilateral synchrony."},
+      {q:"Sampling skew is reduced by…",opts:["Burst-mode sampling","Lowering the gain","Increasing paper speed","Removing the ground"],a:0,ex:"<b>Burst-mode sampling</b> reduces the inter-channel time lag."}
+    ],
+    cheat:[
+      {h:"Core numbers", headers:["Spec","Value"], rows:[
+        ["Nyquist","≥ 2× fastest frequency"],
+        ["ACNS sample rate","≥ 3× the HFF"],
+        ["CMRR minimum","90 dB (10,000:1)"],
+        ["Amplitude resolution","≥ 16 bits"],
+        ["Screen resolution","1280×1024 (≥1280 px horiz.)"],
+        ["Standard time scale","30 mm/s"]]},
+      {h:"Paper speed choices", headers:["Speed","Use for"], rows:[
+        ["Fast 60 mm/s","2° bilateral synchrony, triphasic lag, spike vs sharp, muscle vs 60 Hz"],
+        ["Standard 30 mm/s","Routine EEG"],
+        ["Slow 15 mm/s","Periodicity, PSG/sleep, neonatal, FIRDA"]]},
+      {h:"Key definitions", hook:"<span class='hl'>Aliasing</span> = under-sampling distortion. <span class='hl'>Dwell time</span> = time between samples. <span class='hl'>Sampling skew</span> = channels not sampled simultaneously (fixed by burst mode). <span class='hl'>Differential amp</span> = amplifies the difference between inputs."}
+    ]
+  }
+
+  ,{
+    id:"ncsterm",
+    title:"NCS Terminology & CV Formulas",
+    sub:"Latency, amplitude, duration & conduction velocity",
+    source:"“Introduction to NCS Terminology” (PIT) deck, NDT 204; Crout & Flicek.",
+    cards:[
+      ["Terms","Four key terms describing NCS waveforms?","<span class='hl'>Latency, amplitude, duration, and conduction velocity</span>."],
+      ["Latency","What is latency, and its unit?","The <span class='hl'>time delay between stimulation and response</span>, measured in milliseconds (ms)."],
+      ["Latency","Motor vs sensory — which latency is used?","Motor: <span class='hl'>take-off (onset) latency</span> from initial baseline deflection. Sensory: <span class='hl'>peak latency</span> (max SNAP response)."],
+      ["Latency","For a CMAP, the take-off latency corresponds to what?","The <span class='hl'>fastest-conducting fibers</span>."],
+      ["Amplitude","What is amplitude, and its units?","The <span class='hl'>height of the waveform</span>. SNAP in <span class='hl'>microvolts (µV)</span>; CMAP in <span class='hl'>millivolts (mV)</span>."],
+      ["Amplitude","How is amplitude typically measured?","<span class='hl'>Baseline to peak</span> for motor & sensory (sensory can also be peak-to-peak)."],
+      ["Duration","What is duration?","The <span class='hl'>time the nerve/muscle responds</span> to the stimulus (ms) — more relevant for motor responses."],
+      ["CV","Conduction velocity — definition & unit?","The <span class='hl'>speed the nerve transmits the impulse</span>; expressed in <span class='hl'>meters/second (m/s)</span>."],
+      ["CV","Conduction velocity formula?","<span class='hl'>CV = D / T</span> (Distance ÷ Time)."],
+      ["CV","How do you find SENSORY CV?","Measure distance (cm) from cathode to active electrode, divide by <span class='hl'>distal onset latency</span> (ms). Then ×10 to get m/s."],
+      ["CV","cm/ms → m/s conversion?","<span class='hl'>Multiply by 10</span> (1 cm/ms = 10 m/s)."],
+      ["CV","How is MOTOR CV calculated?","<span class='hl'>Distance between stim sites S2 & S1</span> ÷ (proximal latency − distal latency) — this excludes the NMJ."],
+      ["CV","Why exclude the NMJ in motor CV?","Because you measure across a <span class='hl'>nerve segment (S2–S1)</span>, not including the recording electrode / neuromuscular junction delay."]
+    ],
+    quiz:[
+      {q:"Latency is measured in what unit?",opts:["Milliseconds (ms)","Microvolts (µV)","Meters/second","Millivolts"],a:0,ex:"Latency = time delay, in <b>ms</b>."},
+      {q:"For SENSORY responses, which latency is used?",opts:["Peak latency","Take-off latency","Terminal latency","Proximal latency"],a:0,ex:"Sensory uses <b>peak latency</b> (max SNAP); motor uses take-off/onset."},
+      {q:"For a CMAP, the take-off latency corresponds to…",opts:["The fastest-conducting fibers","The slowest fibers","The average fiber","The sensory fibers"],a:0,ex:"Onset = the <b>fastest-conducting</b> motor fibers."},
+      {q:"SNAP amplitude is measured in ___ and CMAP in ___.",opts:["µV; mV","mV; µV","ms; m/s","m/s; ms"],a:0,ex:"SNAP = <b>microvolts</b>, CMAP = <b>millivolts</b>."},
+      {q:"The conduction velocity formula is…",opts:["CV = D / T","CV = T / D","CV = D × T","CV = D + T"],a:0,ex:"<b>CV = Distance ÷ Time.</b>"},
+      {q:"Median sensory: distance 14.5 cm, onset latency 2.8 ms. CV in m/s?",opts:["~52 m/s","~5.2 m/s","~40 m/s","~148 m/s"],a:0,ex:"14.5 ÷ 2.8 = 5.2 cm/ms, ×10 = <b>52 m/s</b>."},
+      {q:"To convert cm/ms to m/s you…",opts:["Multiply by 10","Divide by 10","Multiply by 100","Do nothing"],a:0,ex:"1 cm/ms = 10 m/s, so <b>×10</b>."},
+      {q:"Motor CV is calculated using…",opts:["Distance between S2 & S1 ÷ (proximal − distal latency)","Distance ÷ distal latency only","Onset latency alone","Amplitude ÷ duration"],a:0,ex:"Motor CV uses <b>two stim sites</b> to exclude the NMJ."}
+    ],
+    cheat:[
+      {h:"The four measurements", headers:["Term","Unit / note"], rows:[
+        ["Latency","ms — stim to response"],
+        ["Amplitude","SNAP µV / CMAP mV — waveform height"],
+        ["Duration","ms — length of response"],
+        ["Conduction velocity","m/s — CV = D/T"]]},
+      {h:"Latency type by study", headers:["Study","Latency used"], rows:[
+        ["Motor (CMAP)","Take-off/onset (fastest fibers)"],
+        ["Sensory (SNAP)","Peak latency"]]},
+      {h:"CV formulas", hook:"Sensory CV = distance ÷ onset latency, then <span class='hl'>×10</span> for m/s. Motor CV = (distance S2–S1) ÷ (proximal − distal latency) — <span class='hl'>excludes the NMJ</span>."}
+    ]
+  }
+  ,{
+    id:"ncsinstr",
+    title:"NCS Instrumentation",
+    sub:"Stimulation, recording, amplifiers, filters & artifact",
+    source:"“Introduction to NCS Instrumentation” (PIT) deck, NDT 204; Cooper/Binnie/Billings 2005; Crout & Flicek.",
+    cards:[
+      ["Stim","Four components of the NCS instrument?","<span class='hl'>Stimulation system, recording system, amplifier (& filters), and display</span>."],
+      ["Stim","Maximal vs supramaximal stimulus — definitions & use?","Maximal = response size stops growing with more intensity (used for <span class='hl'>SNAP</span>). Supramaximal = <span class='hl'>20–30% above</span> max (used for <span class='hl'>CMAP</span>)."],
+      ["Stim","Stimulus intensity range?","<span class='hl'>0–100 mA</span> (current)."],
+      ["Stim","Constant current vs constant voltage — which is preferred?","<span class='hl'>Constant current</span> — passes current regardless of impedance, more consistent. Constant voltage applies set voltage regardless of impedance (even if disconnected)."],
+      ["Stim","Stimulus duration range & pain relationship?","<span class='hl'>0.05–1.0 ms</span> typically; the <span class='hl'>longer</span> the duration, the more painful."],
+      ["Stim","Anode vs cathode placement (standard)?","Anode (+) <span class='hl'>proximal</span> (hyperpolarization); cathode (−) <span class='hl'>distal</span> (depolarization). Exception: F & H waves."],
+      ["Amp","What does a differential amplifier do?","Records/amplifies the <span class='hl'>difference between two inputs</span> and rejects potentials common to both (common mode rejection)."],
+      ["Filter","Low filter — effect & risk of excess?","Attenuates <span class='hl'>slow</span> frequencies (leaves fast alone). Excessive low filtering → <span class='hl'>phase lead</span> (waves appear sooner)."],
+      ["Filter","High filter — effect & risk of excess?","Attenuates <span class='hl'>fast</span> frequencies (leaves slow alone). Excessive high filtering → <span class='hl'>phase lag</span> (waves appear later)."],
+      ["Filter","What does excessive filtering distort?","<span class='hl'>Latency, amplitude, and morphology</span> of the waveforms."],
+      ["Elec","Recording electrode colors?","Active = (−) <span class='hl'>black</span>; reference = (+) <span class='hl'>red</span>; ground = <span class='hl'>green</span>."],
+      ["Tech","Patient factors affecting studies?","<span class='hl'>Temperature, limb conditions, age, height, anatomy</span>."],
+      ["Tech","Key to conquering technical/artifact issues?","<span class='hl'>Consistency</span>."]
+    ],
+    quiz:[
+      {q:"Which stimulus type is used for CMAP (motor)?",opts:["Supramaximal","Maximal","Submaximal","Threshold"],a:0,ex:"CMAP uses <b>supramaximal</b> (20–30% above max); SNAP uses maximal."},
+      {q:"Supramaximal stimulation is defined as…",opts:["20–30% above the intensity for max amplitude","Exactly the max amplitude","Half the max","Any intensity above zero"],a:0,ex:"<b>20–30% above</b> the maximal response intensity."},
+      {q:"Preferred stimulation method and why?",opts:["Constant current — consistent regardless of impedance","Constant voltage — works even if disconnected","Either, no difference","Constant charge"],a:0,ex:"<b>Constant current</b> is preferred for consistency."},
+      {q:"Longer stimulus duration means…",opts:["More painful","Less painful","No pain change","Lower amplitude"],a:0,ex:"Longer duration = <b>more painful</b>."},
+      {q:"A differential amplifier amplifies…",opts:["The difference between two inputs","Each input separately","Only the ground","The 60 Hz signal"],a:0,ex:"The <b>difference</b> between inputs; common signals are rejected."},
+      {q:"Excessive LOW filtering causes…",opts:["Phase lead — waves appear sooner","Phase lag — waves appear later","No effect","Amplitude increase only"],a:0,ex:"Low filter excess → <b>phase lead</b> (sooner)."},
+      {q:"Excessive HIGH filtering causes…",opts:["Phase lag — waves appear later","Phase lead — waves appear sooner","Higher frequencies pass","No change to latency"],a:0,ex:"High filter excess → <b>phase lag</b> (later)."},
+      {q:"The active recording electrode is conventionally…",opts:["(−), black","(+), red","Green","Blue"],a:0,ex:"Active = <b>(−) black</b>; reference = (+) red; ground = green."},
+      {q:"Which is NOT listed as a patient technical factor?",opts:["Line voltage","Temperature","Limb length/height","Age"],a:0,ex:"Patient factors: temperature, limb conditions, age, height, anatomy — not line voltage."}
+    ],
+    cheat:[
+      {h:"Stimulus type", headers:["Type","Use"], rows:[
+        ["Maximal","SNAP (sensory)"],
+        ["Supramaximal (20–30% above)","CMAP (motor)"]]},
+      {h:"Constant current vs voltage", hook:"<span class='hl'>Constant current</span> is preferred — passes current regardless of impedance. Keep impedances low either way."},
+      {h:"Filters", headers:["Filter","Excess effect"], rows:[
+        ["Low (attenuates slow)","Phase LEAD — waves sooner"],
+        ["High (attenuates fast)","Phase LAG — waves later"]],
+        hook:"Excessive filtering distorts <span class='hl'>latency, amplitude & morphology</span>."},
+      {h:"Electrode colors", hook:"Active = <span class='hl'>(−) black</span> · Reference = <span class='hl'>(+) red</span> · Ground = <span class='hl'>green</span>. Stimulus intensity 0–100 mA; duration 0.05–1.0 ms."}
+    ]
+  }
+  ,{
+    id:"eegmaturation",
+    title:"EEG Maturation",
+    sub:"Neonatal → adolescent EEG development",
+    source:"“EEG Maturation: Neonatal to Adolescence” deck (V. Sexton); ACNS Guideline 16.",
+    cards:[
+      ["Ages","Conceptional age (CA) vs gestational age (GA)?","CA = true fetal age from <span class='hl'>conception</span>. GA (menstrual age) = from the <span class='hl'>first day of the last menstrual period</span>."],
+      ["Preterm","Dominant background in the very preterm neonate?","Mostly <span class='hl'>discontinuous</span> in all behavioral states."],
+      ["Patterns","Tracé discontinu — what & when does it emerge?","The discontinuous pattern; the defining feature of <span class='hl'>quiet sleep</span>, first emerging ~<span class='hl'>28 weeks PMA</span>."],
+      ["Patterns","Tracé alternant — what & when?","Alternating pattern of <span class='hl'>quiet sleep</span>; by <span class='hl'>37–40 weeks</span> it fully replaces tracé discontinu."],
+      ["Patterns","By 34–36 weeks, tracé discontinu is seen only when?","Only in <span class='hl'>quiet sleep</span>."],
+      ["Patterns","What are delta brushes, and where prominent?","A characteristic preterm pattern; prominent in the <span class='hl'>occipital and rolandic</span> regions."],
+      ["Sleep","Which sleep type does a normal newborn ENTER first?","<span class='hl'>REM (active) sleep</span> — with random limb/facial movements & irregular respiration."],
+      ["Sleep","Active (REM) sleep EEG in the newborn?","Low-voltage, mixed-frequency, nearly <span class='hl'>continuous</span> pattern."],
+      ["Sleep","Quiet sleep EEG in the newborn?","<span class='hl'>Discontinuous</span> — bursts of high-voltage delta followed by ~10 s of low-voltage activity."],
+      ["Sleep","How does a term infant divide its day?","~⅓ awake; remaining ⅔ (~16 h) split between NREM and REM; sleep-wake cycles ~<span class='hl'>3–4 hours</span>."],
+      ["Sleep","When do adult-like NREM stages & 90–100 min cycles appear?","NREM stages emerge by <span class='hl'>6 months</span>; 90–100 min cycles not until <span class='hl'>school age</span>."],
+      ["Sleep","When is active sleep well-differentiated?","By <span class='hl'>37 weeks CA</span> — medium-voltage continuous EEG, REMs, irregular breathing, muscle atonia, phasic twitches."]
+    ],
+    quiz:[
+      {q:"Gestational age (GA) is measured from…",opts:["The first day of the last menstrual period","Conception","Birth","The first ultrasound"],a:0,ex:"GA (menstrual age) starts at the <b>LMP</b>; CA starts at conception."},
+      {q:"Tracé discontinu is the defining feature of…",opts:["Quiet sleep","Active sleep","Wakefulness","Seizure"],a:0,ex:"Tracé discontinu defines <b>quiet sleep</b>, emerging ~28 weeks PMA."},
+      {q:"By 37–40 weeks, tracé discontinu is replaced by…",opts:["Tracé alternant","Delta brushes","Alpha rhythm","Burst suppression"],a:0,ex:"<b>Tracé alternant</b> fully replaces it by term."},
+      {q:"Delta brushes are most prominent in which regions?",opts:["Occipital and rolandic","Frontal only","Temporal only","Midline vertex"],a:0,ex:"<b>Occipital and rolandic</b> regions."},
+      {q:"A normal newborn first enters which sleep state?",opts:["REM (active) sleep","NREM stage 3","Slow-wave sleep","Stage 2 spindle sleep"],a:0,ex:"Newborns enter <b>REM/active sleep</b> first."},
+      {q:"Newborn quiet-sleep EEG shows…",opts:["High-voltage delta bursts then ~10 s low voltage (discontinuous)","Continuous alpha","Sleep spindles","Flat isoelectric line"],a:0,ex:"Quiet sleep = <b>discontinuous</b> bursts of delta then low voltage."},
+      {q:"Adult-like 90–100 minute sleep cycles appear around…",opts:["School age","Birth","6 weeks","6 months"],a:0,ex:"NREM stages by 6 months, but 90–100 min cycles not until <b>school age</b>."},
+      {q:"A term infant's sleep-wake states cycle roughly every…",opts:["3–4 hours","90 minutes","30 minutes","12 hours"],a:0,ex:"About every <b>3–4 hours</b> in the term newborn."}
+    ],
+    cheat:[
+      {h:"Age terms", headers:["Term","Measured from"], rows:[
+        ["Conceptional age (CA)","Conception (true fetal age)"],
+        ["Gestational age (GA)","Last menstrual period (LMP)"]]},
+      {h:"Neonatal sleep patterns", headers:["State","EEG"], rows:[
+        ["Active (REM) sleep","Low-voltage, mixed, ~continuous"],
+        ["Quiet sleep","Discontinuous — delta bursts then low voltage"]]},
+      {h:"Discontinuity timeline", headers:["Pattern","Timing"], rows:[
+        ["Tracé discontinu emerges","~28 weeks PMA"],
+        ["Seen only in quiet sleep","34–36 weeks"],
+        ["Replaced by tracé alternant","37–40 weeks (term)"]],
+        hook:"<span class='hl'>Delta brushes</span> (occipital/rolandic) are the classic preterm pattern. Newborns enter <span class='hl'>REM first</span>; cycle ~3–4 h."}
+    ]
+  }
+  ,{
+    id:"evokedpot",
+    title:"Evoked Potentials & VEP (ACNS 9A/9B)",
+    sub:"Standards, normative data & pattern VEP",
+    source:"ACNS Guideline 9A (Evoked Potentials) & 9B (Visual EPs), 2006/2008.",
+    cards:[
+      ["Shift","How has EP use shifted over time?","From <span class='hl'>diagnosing</span> neurological disorders toward <span class='hl'>intraoperative monitoring</span> to prevent injury."],
+      ["Norms","Minimum normal subjects to validate reference norms?","At least <span class='hl'>20 normal subjects</span> spanning the patient age range."],
+      ["Norms","Four sources of normative-data differences between labs?","<span class='hl'>Subject characteristics, stimulation parameters, recording parameters, and data-reduction (peak-picking) rules</span>."],
+      ["Norms","How are latencies/amplitudes generally judged abnormal?","Latencies & interpeak intervals abnormal when <span class='hl'>excessively long</span>; amplitudes abnormal when <span class='hl'>excessively small</span> (one-tailed tolerance limits)."],
+      ["Norms","Common tolerance limits used?","<span class='hl'>99% and 95%</span> (e.g., ≥99% of the normal population below the upper limit, with 95% confidence)."],
+      ["Amp","Why must EP responses be replicated?","To prove the response is <span class='hl'>neural, not artifact</span> — artifact usually won't repeat in subsequent averages."],
+      ["Amp","Why is averaging needed for EPs?","EP amplitudes are tiny, so <span class='hl'>computer averaging/summation</span> pulls them out of background noise."],
+      ["Equip","Preferred A-D converter resolution for EPs?","<span class='hl'>12-bit</span> preferred (8-bit adequate for many uses) for broader dynamic range."],
+      ["Equip","Common mode rejection minimum (EP amplifier)?","At least <span class='hl'>80 dB (10,000:1)</span>."],
+      ["Filter","Recommended high:low filter ratio to minimize phase shift?","At least <span class='hl'>100:1</span>."],
+      ["VEP","What is the key waveform in a pattern VEP?","The <span class='hl'>P100</span> — a positive peak ~100 ms."],
+      ["VEP","Standard PVEP checkerboard contrast & reversal rate (half-field)?","High-contrast (>50%) black-and-white checkerboard, reversal rate <span class='hl'>≤4/s</span>."],
+      ["VEP","Why can a double-peaked (\"W\") P100 be misleading?","Either, both, or neither peak may be the true P100 (e.g., central scotoma) — may need <span class='hl'>hemi-/partial-field</span> testing."],
+      ["VEP","Why is half-field VEP testing useful?","It's <span class='hl'>more sensitive</span> than full-field for detecting visual-pathway lesions and can reveal abnormality despite normal full-field VEPs."]
+    ],
+    quiz:[
+      {q:"The primary clinical use of evoked potentials has shifted toward…",opts:["Intraoperative monitoring","Diagnosing migraines","Sleep staging","Cognitive testing"],a:0,ex:"From diagnosis toward <b>intraoperative monitoring</b> to prevent injury."},
+      {q:"Minimum number of normal subjects to validate a reference lab's norms?",opts:["20","5","50","100"],a:0,ex:"At least <b>20</b> normal subjects across the age range."},
+      {q:"In EP studies, latencies are generally abnormal when they are…",opts:["Excessively long","Excessively short","Exactly average","Highly variable"],a:0,ex:"Latencies/interpeak intervals abnormal when <b>too long</b>; amplitudes when too small."},
+      {q:"Why must an evoked potential be replicated?",opts:["To confirm it's neural, not artifact","To increase amplitude","To speed up the study","To reduce cost"],a:0,ex:"Replication proves a <b>neural (not artifactual)</b> origin."},
+      {q:"Averaging is required for EPs because…",opts:["Their amplitude is small vs background noise","They are too fast to see","They have no latency","The patient moves"],a:0,ex:"<b>Small amplitude</b> requires averaging to pull the signal from noise."},
+      {q:"The key pattern-VEP waveform is the…",opts:["P100","N20","Wave V","P300"],a:0,ex:"The <b>P100</b> — a positive peak near 100 ms."},
+      {q:"Recommended high-to-low filter ratio to minimize phase shift?",opts:["At least 100:1","10:1","1:1","1000:1 exactly"],a:0,ex:"At least <b>100:1</b>."},
+      {q:"Half-field VEP testing is valuable because it is…",opts:["More sensitive than full-field for pathway lesions","Faster and needs less cooperation","Always normal","Only for children"],a:0,ex:"Half-field is <b>more sensitive</b> (though more technically demanding)."}
+    ],
+    cheat:[
+      {h:"Normative data rules", headers:["Item","Standard"], rows:[
+        ["Min. normal subjects","≥ 20 (span the age range)"],
+        ["Tolerance limits","95% / 99%"],
+        ["Abnormal latency","Excessively long"],
+        ["Abnormal amplitude","Excessively small"]]},
+      {h:"EP equipment minimums", headers:["Spec","Value"], rows:[
+        ["A-D resolution","12-bit preferred"],
+        ["Common mode rejection","≥ 80 dB (10,000:1)"],
+        ["High:low filter ratio","≥ 100:1"]]},
+      {h:"Pattern VEP (P100)", hook:"P100 = positive peak ~100 ms. Half-field: high-contrast (>50%) checkerboard, reversal <span class='hl'>≤4/s</span>. A double-peaked \"W\" P100 can mislead — use <span class='hl'>hemi-/partial-field</span> testing."},
+      {h:"Two big ideas", hook:"<span class='hl'>Replication</span> proves neural (not artifact) origin; <span class='hl'>averaging</span> extracts small EP signals from noise."}
+    ]
+  }
+
+];
+
+/* ===================== STATE ===================== */
+const progress = {}; // id -> {seen:Set, quizBest:null}
+TOPICS.forEach(t=>progress[t.id]={seen:new Set(), quizBest:null});
+let cur=null;                 // current topic obj
+let fc={i:0,flip:false};      // flashcard state
+let qz={i:0,correct:0,answered:false,ans:[]};
+
+const $=id=>document.getElementById(id);
+const pad=n=>String(n).padStart(2,'0');
+const screens=["home","topicMenu","flash","quiz","cheat","progress"];
+function show(id){screens.forEach(s=>$(s).classList.toggle('hidden',s!==id));window.scrollTo({top:0});}
+function setTop(crumb,title){$('crumb').textContent=crumb;$('topttl').textContent=title;}
+
+/* ===================== HOME ===================== */
+function renderHome(){
+  const list=$('topicList');list.innerHTML='';
+  TOPICS.forEach(t=>{
+    const p=progress[t.id];
+    const pct=Math.round(p.seen.size/t.cards.length*100);
+    const el=document.createElement('div');
+    el.className='topic';
+    el.onclick=()=>openTopic(t.id);
+    el.innerHTML=`<div class="accent"></div>
+      <div class="pct">${pct}%</div>
+      <h3>${t.title}</h3>
+      <div class="meta">${t.cards.length} cards · ${t.quiz.length} quiz Qs${p.quizBest!=null?` · best ${p.quizBest}%`:''}</div>
+      <div class="bar"><i style="width:${pct}%"></i></div>`;
+    list.appendChild(el);
+  });
+  const totalSeen=TOPICS.reduce((s,t)=>s+progress[t.id].seen.size,0);
+  const started=TOPICS.filter(t=>progress[t.id].seen.size>0||progress[t.id].quizBest!=null).length;
+  const bestQuiz=Math.max(-1,...TOPICS.map(t=>progress[t.id].quizBest??-1));
+  $('stStudied').textContent=totalSeen;
+  $('stQuiz').textContent=bestQuiz<0?'—':bestQuiz+'%';
+  $('stTopics').textContent=`${started}/${TOPICS.length}`;
+  $('homeSrc').innerHTML="Built from Na's NDT course materials. Sources are listed within each topic.";
+}
+function goHome(){cur=null;setTop('NDT Study Hub','NDT Study Hub');$('tabHome').classList.add('active');$('tabProg').classList.remove('active');renderHome();show('home');}
+
+/* ===================== TOPIC MENU ===================== */
+function openTopic(id){
+  cur=TOPICS.find(t=>t.id===id);
+  setTop(cur.title,cur.title);
+  $('tmTitle').textContent=cur.title;
+  $('tmSub').textContent=cur.sub;
+  $('tmFcCount').textContent=`${cur.cards.length} cards`;
+  $('tmQzCount').textContent=`${cur.quiz.length} questions`;
+  $('tmSrc').innerHTML='Source: '+cur.source;
+  show('topicMenu');
+}
+
+/* ===================== FLASHCARDS ===================== */
+function startFlash(){fc={i:0,flip:false};setTop(cur.title,'Flashcards');$('fcTitle').textContent=cur.title;paintFlash();show('flash');}
+function paintFlash(){
+  const c=cur.cards[fc.i];
+  const card=$('fcard');card.classList.remove('flip');fc.flip=false;
+  $('fcTag').textContent=c[0].toUpperCase();
+  $('fcQ').innerHTML=c[1];$('fcA').innerHTML=c[2];
+  $('fcCount').textContent=`${pad(fc.i+1)} / ${pad(cur.cards.length)}`;
+  $('fcPrev').disabled=fc.i===0;$('fcNext').disabled=fc.i===cur.cards.length-1;
+  progress[cur.id].seen.add(fc.i);
+  const dots=$('fcDots');dots.innerHTML='';
+  cur.cards.forEach((_,n)=>{const d=document.createElement('div');
+    d.className='dot'+(n===fc.i?' cur':(progress[cur.id].seen.has(n)?' done':''));
+    d.onclick=()=>{fc.i=n;paintFlash();};dots.appendChild(d);});
+}
+$('fcard').onclick=()=>{fc.flip=!fc.flip;$('fcard').classList.toggle('flip',fc.flip);};
+$('fcPrev').onclick=()=>{if(fc.i>0){fc.i--;paintFlash();}};
+$('fcNext').onclick=()=>{if(fc.i<cur.cards.length-1){fc.i++;paintFlash();}};
+$('fcBack').onclick=()=>openTopic(cur.id);
+
+/* ===================== QUIZ ===================== */
+function startQuiz(){qz={i:0,correct:0,answered:false,ans:[]};setTop(cur.title,'Practice quiz');paintQuiz();show('quiz');}
+function paintQuiz(){
+  const item=cur.quiz[qz.i];qz.answered=false;
+  $('qzFill').style.width=(qz.i/cur.quiz.length*100)+'%';
+  $('qzPos').textContent=`Q ${pad(qz.i+1)}`;
+  $('qzAcc').textContent=qz.i?Math.round(qz.correct/qz.i*100)+'%':'—';
+  $('qzStage').innerHTML=`
+    ${item.scen?`<div class="scenario">▸ ${item.scen}</div>`:''}
+    <div class="qtext">${item.q}</div>
+    <div id="qzOpts"></div>
+    <div class="exp" id="qzExp"><b>Why:</b> ${item.ex}</div>
+    <div class="fcnav"><span class="counter">${qz.correct} correct</span>
+      <button class="mv" id="qzNext" disabled>${qz.i===cur.quiz.length-1?'Results':'Next'}</button></div>`;
+  const box=$('qzOpts');
+  item.opts.forEach((o,idx)=>{const b=document.createElement('button');
+    b.className='opt';b.innerHTML=`<span class="k">${String.fromCharCode(65+idx)}</span>${o}`;
+    b.onclick=()=>chooseQ(idx);box.appendChild(b);});
+  $('qzNext').onclick=nextQ;
+}
+function chooseQ(idx){
+  if(qz.answered)return;qz.answered=true;
+  const item=cur.quiz[qz.i];const btns=[...document.querySelectorAll('#qzOpts .opt')];
+  btns.forEach((b,bi)=>{b.disabled=true;
+    if(bi===item.a)b.classList.add('correct');
+    else if(bi===idx)b.classList.add('wrong');else b.classList.add('muted');});
+  const ok=idx===item.a;if(ok)qz.correct++;
+  qz.ans.push({q:item.q,ok});
+  $('qzExp').classList.add('show');$('qzNext').disabled=false;
+  $('qzAcc').textContent=Math.round(qz.correct/(qz.i+1)*100)+'%';
+}
+function nextQ(){if(qz.i<cur.quiz.length-1){qz.i++;paintQuiz();window.scrollTo({top:0});}else resultsQ();}
+function resultsQ(){
+  $('qzFill').style.width='100%';
+  const pct=Math.round(qz.correct/cur.quiz.length*100);
+  $('qzPos').textContent=`Q ${pad(cur.quiz.length)}`;$('qzAcc').textContent=pct+'%';
+  const prev=progress[cur.id].quizBest;progress[cur.id].quizBest=prev==null?pct:Math.max(prev,pct);
+  let grade=pct>=90?'Clean tracing':pct>=75?'Solid work':pct>=60?'Review the misses':'Run it again';
+  const rev=qz.ans.map((r,n)=>`<div class="rev-item"><span class="mk ${r.ok?'ok':'no'}">${r.ok?'✓':'✕'}</span><span>${pad(n+1)}. ${r.q}</span></div>`).join('');
+  $('qzStage').innerHTML=`<div class="results">
+    <div class="big">${pct}<span>%</span></div>
+    <div class="grade">${grade}</div>
+    <p>${qz.correct} of ${cur.quiz.length} correct${progress[cur.id].quizBest===pct&&prev!=null&&pct>prev?' · new best!':''}</p>
+    <div class="btns" style="justify-content:center">
+      <button class="mv ghost" onclick="openTopic(cur.id)">Topic menu</button>
+      <button class="mv" onclick="startQuiz()">Retry</button></div>
+    <div class="review"><h3>Question review</h3>${rev}</div></div>`;
+}
+$('qzBack').onclick=()=>openTopic(cur.id);
+
+/* ===================== CHEAT SHEET ===================== */
+function startCheat(){
+  setTop(cur.title,'Cheat sheet');$('csTitle').textContent=cur.title;
+  const body=$('csBody');body.innerHTML='';
+  cur.cheat.forEach(sec=>{
+    if(sec.h){const h=document.createElement('h4');h.textContent=sec.h;body.appendChild(h);}
+    if(sec.rows){
+      const t=document.createElement('table');
+      if(sec.headers){const tr=document.createElement('tr');
+        sec.headers.forEach(x=>{const th=document.createElement('th');th.textContent=x;tr.appendChild(th);});t.appendChild(tr);}
+      sec.rows.forEach(r=>{const tr=document.createElement('tr');
+        r.forEach(c=>{const td=document.createElement('td');td.innerHTML=c;tr.appendChild(td);});t.appendChild(tr);});
+      body.appendChild(t);
+    }
+    if(sec.hook){const d=document.createElement('div');d.className='hook';d.innerHTML=sec.hook;body.appendChild(d);}
+  });
+  $('csSrc').innerHTML='Source: '+cur.source;
+  show('cheat');
+}
+$('csBack').onclick=()=>openTopic(cur.id);
+
+/* ===================== PROGRESS ===================== */
+function goProgress(){
+  setTop('NDT Study Hub','Progress');
+  $('tabProg').classList.add('active');$('tabHome').classList.remove('active');
+  const list=$('prgList');list.innerHTML='';
+  TOPICS.forEach(t=>{
+    const p=progress[t.id];const pct=Math.round(p.seen.size/t.cards.length*100);
+    const el=document.createElement('div');el.className='topic';el.onclick=()=>openTopic(t.id);
+    el.innerHTML=`<div class="accent"></div><div class="pct">${pct}%</div>
+      <h3>${t.title}</h3>
+      <div class="meta">${p.seen.size}/${t.cards.length} cards seen${p.quizBest!=null?` · best quiz ${p.quizBest}%`:' · quiz not taken'}</div>
+      <div class="bar"><i style="width:${pct}%"></i></div>`;
+    list.appendChild(el);
+  });
+  const totalSeen=TOPICS.reduce((s,t)=>s+progress[t.id].seen.size,0);
+  const totalCards=TOPICS.reduce((s,t)=>s+t.cards.length,0);
+  $('prgNote').textContent=`${totalSeen} of ${totalCards} cards seen across ${TOPICS.length} topics.`;
+  show('progress');
+}
+
+/* keyboard for laptop use */
+document.addEventListener('keydown',e=>{
+  if(!$('flash').classList.contains('hidden')){
+    if(e.key==='ArrowRight'&&fc.i<cur.cards.length-1){fc.i++;paintFlash();}
+    else if(e.key==='ArrowLeft'&&fc.i>0){fc.i--;paintFlash();}
+    else if(e.key===' '||e.key==='Enter'){e.preventDefault();fc.flip=!fc.flip;$('fcard').classList.toggle('flip',fc.flip);}
+  }
+});
+
+goHome();
+</script>
+<script>
+/* Register service worker for offline use (ignored when opened as a local file). */
+if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("sw.js").catch(() => {});
+  });
+}
+</script>
+</body>
+</html>
