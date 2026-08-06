@@ -214,6 +214,24 @@
   .histbar{display:flex;align-items:flex-end;gap:4px;height:44px;margin:6px 0 2px}
   .histbar .hb{flex:1;background:var(--signal);border-radius:3px 3px 0 0;min-height:3px;opacity:.85}
   .histrow{font-family:"Courier New",monospace;font-size:11px;color:var(--muted);display:flex;justify-content:space-between}
+  .listenbtn{width:100%;background:#2a6b5f;color:#fff;border:none;border-radius:12px;
+    padding:14px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;margin-bottom:14px;
+    display:flex;align-items:center;justify-content:center;gap:8px}
+  .listenbtn:active{transform:scale(.99)}
+  .listenbtn.topic{background:#2a6b5f;margin-top:10px}
+  .audiobar{position:fixed;left:50%;transform:translateX(-50%);bottom:70px;width:calc(100% - 24px);
+    max-width:496px;background:var(--panel);color:#fff;border-radius:14px;padding:12px 14px;
+    box-shadow:0 6px 24px rgba(0,0,0,.3);z-index:60;display:none}
+  .audiobar.show{display:block}
+  .audiobar .now{font-size:12.5px;opacity:.85;margin-bottom:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .audiobar .ctl{display:flex;align-items:center;gap:10px;justify-content:center}
+  .audiobar button{background:rgba(255,255,255,.12);color:#fff;border:none;border-radius:9px;
+    width:44px;height:40px;font-size:17px;cursor:pointer}
+  .audiobar button.big{width:56px;background:var(--trace)}
+  .audiobar button:active{transform:scale(.94)}
+  .audiobar .spd{font-size:12px;opacity:.85;min-width:34px;text-align:center;cursor:pointer;background:none;width:auto}
+  .audiobar .close{position:absolute;top:8px;right:10px;background:none;width:auto;height:auto;font-size:16px;opacity:.7}
+  [data-theme="dark"] .audiobar{background:#0a1420}
   .placecard{background:var(--panel);color:#cfe6df;border-radius:12px;padding:16px;margin-bottom:14px}
   .placecard h4{font-size:15px;margin-bottom:6px;color:#fff}
   .placecard p{font-size:13px;color:#9fc4b8;margin-bottom:10px}
@@ -258,6 +276,7 @@
   <div id="searchResults" class="hidden"></div>
   <button class="mixedbtn" id="mixedBtn">⚡ Quiz me on everything (mixed)</button>
   <button class="mixedbtn" id="placeBtn" style="background:var(--trace)">◎ Find my weak spots (placement)</button>
+  <button class="listenbtn" id="listenAllBtn">🔊 Listen to everything (audio study)</button>
   <div class="sectlabel">Topics</div>
   <div id="topicList"></div>
   <div class="addnote">More material can be added over time — each topic holds its own flashcards, quiz, and cheat sheet.</div>
@@ -274,6 +293,7 @@
     <button class="mode" onclick="startQuiz()"><div class="ic">✎</div><div class="t">Practice quiz</div><div class="d" id="tmQzCount"></div></button>
     <button class="mode wide" onclick="startCheat()"><div class="ic">⚡</div><div class="t">Cheat sheet</div><div class="d">Quick reference — the things people mix up</div></button>
   </div>
+  <button class="listenbtn topic" id="listenTopicBtn">🔊 Listen to this topic</button>
   <div id="tmHist"></div>
   <div class="srcnote" id="tmSrc"></div>
 </div>
@@ -1881,6 +1901,129 @@ function placementResults(){
 
 
 initTheme();
+
+/* ===================== AUDIO NARRATION (Web Speech API) ===================== */
+const AUDIO = (function(){
+  const supported = ('speechSynthesis' in window) && ('SpeechSynthesisUtterance' in window);
+  let queue=[];      // array of {kind:'q'|'a'|'chapter', text, cardIndex, topicTitle}
+  let pos=0;
+  let playing=false;
+  let rate=1.0;
+  const rates=[0.8,1.0,1.2,1.4];
+  let voice=null;
+
+  function pickVoice(){
+    if(!supported) return;
+    const vs=window.speechSynthesis.getVoices();
+    if(!vs || !vs.length) return;
+    // prefer an English voice, ideally a natural-sounding one
+    voice = vs.find(v=>/en[-_]US/i.test(v.lang) && /natural|google|samantha|zira/i.test(v.name))
+         || vs.find(v=>/^en/i.test(v.lang))
+         || vs[0];
+  }
+  if(supported){
+    pickVoice();
+    if(window.speechSynthesis.onvoiceschanged!==undefined){
+      window.speechSynthesis.onvoiceschanged=pickVoice;
+    }
+  }
+
+  const strip=s=>String(s).replace(/<[^>]+>/g,'').replace(/&amp;/g,'and').replace(/₂/g,'-two').replace(/\s+/g,' ').trim();
+
+  function buildTopicQueue(topic){
+    const q=[];
+    q.push({kind:'chapter', text:'Topic: '+strip(topic.title)+'.', topicTitle:topic.title});
+    topic.cards.forEach((c,i)=>{
+      q.push({kind:'q', text:strip(c[1]), cardIndex:i, topicTitle:topic.title});
+      q.push({kind:'a', text:'Answer. '+strip(c[2]), cardIndex:i, topicTitle:topic.title});
+    });
+    return q;
+  }
+
+  function start(list, label){
+    if(!supported){ alert('Sorry — your browser doesn\u2019t support in-app audio. You can use your phone\u2019s built-in Read Aloud instead.'); return; }
+    stop();
+    queue=list; pos=0; playing=true;
+    showBar(true);
+    speakCurrent();
+  }
+  function startTopic(topic){ start(buildTopicQueue(topic), topic.title); }
+  function startAll(){
+    let all=[];
+    TOPICS.forEach(t=>{ all=all.concat(buildTopicQueue(t)); });
+    start(all,'Everything');
+  }
+
+  function speakCurrent(){
+    if(!playing || pos>=queue.length){ finish(); return; }
+    const item=queue[pos];
+    const u=new SpeechSynthesisUtterance(item.text);
+    u.rate=rate; if(voice) u.voice=voice;
+    // a slightly longer gap after a question (the "study pause")
+    u.onend=()=>{
+      if(!playing) return;
+      const gap = item.kind==='q' ? 900 : 250;  // pause to think after the question
+      setTimeout(()=>{ if(playing){ pos++; speakCurrent(); } }, gap);
+    };
+    u.onerror=()=>{ if(playing){ pos++; speakCurrent(); } };
+    updateNow(item);
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(u);
+  }
+
+  function updateNow(item){
+    const el=document.getElementById('auNow'); if(!el) return;
+    const total=queue.length;
+    let label = item.kind==='chapter' ? ('▶ '+item.text)
+              : (item.topicTitle+' — '+(item.kind==='q'?'Question':'Answer'));
+    el.textContent=label;
+    const pb=document.getElementById('auPlay'); if(pb) pb.textContent = playing?'⏸':'▶';
+  }
+
+  function toggle(){
+    if(!supported) return;
+    if(playing){ playing=false; window.speechSynthesis.cancel(); }
+    else { playing=true; speakCurrent(); }
+    const pb=document.getElementById('auPlay'); if(pb) pb.textContent = playing?'⏸':'▶';
+  }
+  function next(){ if(!queue.length) return; window.speechSynthesis.cancel(); pos=Math.min(pos+1,queue.length-1); if(!playing){playing=true;} speakCurrent(); }
+  function prev(){ if(!queue.length) return; window.speechSynthesis.cancel(); pos=Math.max(pos-1,0); if(!playing){playing=true;} speakCurrent(); }
+  function cycleSpeed(){
+    let idx=rates.indexOf(rate); idx=(idx+1)%rates.length; rate=rates[idx];
+    const sb=document.getElementById('auSpeed'); if(sb) sb.textContent=rate.toFixed(1)+'×';
+    if(playing){ window.speechSynthesis.cancel(); speakCurrent(); }
+  }
+  function finish(){
+    playing=false;
+    const el=document.getElementById('auNow'); if(el) el.textContent='Finished ✓';
+    const pb=document.getElementById('auPlay'); if(pb) pb.textContent='▶';
+  }
+  function stop(){
+    playing=false;
+    if(supported) window.speechSynthesis.cancel();
+    showBar(false);
+  }
+  function showBar(on){
+    const bar=document.getElementById('audioBar'); if(bar) bar.classList.toggle('show',on);
+  }
+
+  return {supported, startTopic, startAll, toggle, next, prev, cycleSpeed, stop};
+})();
+
+// Wire audio buttons
+(function(){
+  const g=document.getElementById('listenAllBtn'); if(g) g.onclick=()=>AUDIO.startAll();
+  const t=document.getElementById('listenTopicBtn'); if(t) t.onclick=()=>{ if(cur) AUDIO.startTopic(cur); };
+  const p=document.getElementById('auPlay'); if(p) p.onclick=()=>AUDIO.toggle();
+  const nx=document.getElementById('auNext'); if(nx) nx.onclick=()=>AUDIO.next();
+  const pv=document.getElementById('auPrev'); if(pv) pv.onclick=()=>AUDIO.prev();
+  const sp=document.getElementById('auSpeed'); if(sp) sp.onclick=()=>AUDIO.cycleSpeed();
+  const cl=document.getElementById('auClose'); if(cl) cl.onclick=()=>AUDIO.stop();
+  // stop speech if the page is hidden/closed to avoid runaway audio
+  window.addEventListener('pagehide',()=>AUDIO.stop());
+})();
+
+
 goHome();
 </script>
 
@@ -1892,5 +2035,15 @@ if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
   });
 }
 </script>
+<div class="audiobar" id="audioBar">
+  <button class="close" id="auClose" aria-label="Stop">✕</button>
+  <div class="now" id="auNow">Ready</div>
+  <div class="ctl">
+    <button id="auPrev" aria-label="Previous">⏮</button>
+    <button class="big" id="auPlay" aria-label="Play or pause">⏸</button>
+    <button id="auNext" aria-label="Next">⏭</button>
+    <button class="spd" id="auSpeed" aria-label="Speed">1.0×</button>
+  </div>
+</div>
 </body>
 </html>
