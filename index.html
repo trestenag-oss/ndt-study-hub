@@ -231,6 +231,11 @@
   .audiobar button:active{transform:scale(.94)}
   .audiobar .spd{font-size:12px;opacity:.85;min-width:34px;text-align:center;cursor:pointer;background:none;width:auto}
   .audiobar .close{position:absolute;top:8px;right:10px;background:none;width:auto;height:auto;font-size:16px;opacity:.7}
+  .audiobar .voicerow{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:12px;opacity:.9}
+  .audiobar .voicerow label{opacity:.8}
+  .audiobar .voicerow select{flex:1;background:rgba(255,255,255,.12);color:#fff;border:none;
+    border-radius:8px;padding:6px 8px;font-size:12px;font-family:inherit;max-width:100%}
+  .audiobar .voicerow select option{color:#111}
   [data-theme="dark"] .audiobar{background:#0a1420}
   .placecard{background:var(--panel);color:#cfe6df;border-radius:12px;padding:16px;margin-bottom:14px}
   .placecard h4{font-size:15px;margin-bottom:6px;color:#fff}
@@ -1905,34 +1910,84 @@ initTheme();
 /* ===================== AUDIO NARRATION (Web Speech API) ===================== */
 const AUDIO = (function(){
   const supported = ('speechSynthesis' in window) && ('SpeechSynthesisUtterance' in window);
-  let queue=[];      // array of {kind:'q'|'a'|'chapter', text, cardIndex, topicTitle}
-  let pos=0;
-  let playing=false;
-  let rate=1.0;
-  const rates=[0.8,1.0,1.2,1.4];
-  let voice=null;
+  const synth = supported ? window.speechSynthesis : null;
+  const VOICE_KEY='ndt_audio_voice';
+  const RATE_KEY='ndt_audio_rate';
 
-  function pickVoice(){
+  let queue=[], pos=0, playing=false, current=null;
+  let rate=1.0; const rates=[0.8,0.9,1.0,1.2,1.4];
+  let voices=[], voice=null;
+  let gapTimer=null;
+  let keepAlive=null;
+  let seq=0; // guards against stale utterance callbacks after skip/cancel
+
+  try{ const r=parseFloat(localStorage.getItem(RATE_KEY)); if(r) rate=r; }catch(e){}
+
+  /* ---- voice loading: iOS often returns [] on first call ---- */
+  function loadVoices(){
     if(!supported) return;
-    const vs=window.speechSynthesis.getVoices();
-    if(!vs || !vs.length) return;
-    // prefer an English voice, ideally a natural-sounding one
-    voice = vs.find(v=>/en[-_]US/i.test(v.lang) && /natural|google|samantha|zira/i.test(v.name))
-         || vs.find(v=>/^en/i.test(v.lang))
-         || vs[0];
+    const list = synth.getVoices() || [];
+    if(!list.length) return;
+    voices = list.filter(v=>/^en/i.test(v.lang));
+    if(!voices.length) voices = list;
+    // restore saved choice
+    let savedName=null;
+    try{ savedName = localStorage.getItem(VOICE_KEY); }catch(e){}
+    voice = (savedName && voices.find(v=>v.name===savedName)) || bestVoice();
+    populatePicker();
+  }
+  function bestVoice(){
+    // prefer higher-quality voices; iOS names them Enhanced/Premium, Android often "Google ..."
+    const score=v=>{
+      let s=0; const n=(v.name||'');
+      if(/premium/i.test(n)) s+=6;
+      if(/enhanced/i.test(n)) s+=5;
+      if(/siri/i.test(n)) s+=4;
+      if(/google|natural|neural/i.test(n)) s+=4;
+      if(/samantha|ava|allison|zoe|evan|karen|daniel|moira/i.test(n)) s+=2;
+      if(/compact|eloquence/i.test(n)) s-=4;
+      if(/en[-_]US/i.test(v.lang)) s+=1;
+      if(v.localService) s+=1;
+      return s;
+    };
+    return voices.slice().sort((a,b)=>score(b)-score(a))[0] || null;
   }
   if(supported){
-    pickVoice();
-    if(window.speechSynthesis.onvoiceschanged!==undefined){
-      window.speechSynthesis.onvoiceschanged=pickVoice;
-    }
+    loadVoices();
+    synth.onvoiceschanged = loadVoices;
+    // iOS sometimes needs a nudge before voices appear
+    setTimeout(loadVoices, 300);
+    setTimeout(loadVoices, 1200);
   }
 
-  const strip=s=>String(s).replace(/<[^>]+>/g,'').replace(/&amp;/g,'and').replace(/₂/g,'-two').replace(/\s+/g,' ').trim();
+  function populatePicker(){
+    const sel=document.getElementById('auVoice'); if(!sel) return;
+    if(sel.dataset.filled==='1' && sel.options.length===voices.length) return;
+    sel.innerHTML='';
+    voices.forEach(v=>{
+      const o=document.createElement('option');
+      o.value=v.name;
+      o.textContent=v.name.replace(/\s*\(.*?\)\s*/,' ')+(/(enhanced|premium)/i.test(v.name)?' ★':'');
+      if(voice && v.name===voice.name) o.selected=true;
+      sel.appendChild(o);
+    });
+    sel.dataset.filled='1';
+  }
+  function setVoiceByName(name){
+    const v=voices.find(x=>x.name===name); if(!v) return;
+    voice=v;
+    try{ localStorage.setItem(VOICE_KEY,name); }catch(e){}
+    if(playing){ restartCurrent(); }
+  }
+
+  const strip=s=>String(s).replace(/<[^>]+>/g,'')
+    .replace(/&amp;/g,' and ').replace(/&lt;/g,' less than ').replace(/&gt;/g,' greater than ')
+    .replace(/₂/g,'-two').replace(/₃/g,'-three')
+    .replace(/\//g,' or ').replace(/·/g,', ')
+    .replace(/\s+/g,' ').trim();
 
   function buildTopicQueue(topic){
-    const q=[];
-    q.push({kind:'chapter', text:'Topic: '+strip(topic.title)+'.', topicTitle:topic.title});
+    const q=[{kind:'chapter', text:'Topic. '+strip(topic.title)+'.', topicTitle:topic.title}];
     topic.cards.forEach((c,i)=>{
       q.push({kind:'q', text:strip(c[1]), cardIndex:i, topicTitle:topic.title});
       q.push({kind:'a', text:'Answer. '+strip(c[2]), cardIndex:i, topicTitle:topic.title});
@@ -1940,74 +1995,120 @@ const AUDIO = (function(){
     return q;
   }
 
-  function start(list, label){
-    if(!supported){ alert('Sorry — your browser doesn\u2019t support in-app audio. You can use your phone\u2019s built-in Read Aloud instead.'); return; }
-    stop();
-    queue=list; pos=0; playing=true;
-    showBar(true);
-    speakCurrent();
-  }
-  function startTopic(topic){ start(buildTopicQueue(topic), topic.title); }
-  function startAll(){
-    let all=[];
-    TOPICS.forEach(t=>{ all=all.concat(buildTopicQueue(t)); });
-    start(all,'Everything');
-  }
-
+  /* ---- iOS-safe speak: always cancel, wait a tick, then speak ---- */
   function speakCurrent(){
-    if(!playing || pos>=queue.length){ finish(); return; }
+    if(!supported || !playing) return;
+    if(pos>=queue.length){ finish(); return; }
+    const mySeq = ++seq;
     const item=queue[pos];
-    const u=new SpeechSynthesisUtterance(item.text);
-    u.rate=rate; if(voice) u.voice=voice;
-    // a slightly longer gap after a question (the "study pause")
-    u.onend=()=>{
-      if(!playing) return;
-      const gap = item.kind==='q' ? 900 : 250;  // pause to think after the question
-      setTimeout(()=>{ if(playing){ pos++; speakCurrent(); } }, gap);
-    };
-    u.onerror=()=>{ if(playing){ pos++; speakCurrent(); } };
-    updateNow(item);
-    window.speechSynthesis.cancel();
-    window.speechSynthesis.speak(u);
+    clearTimeout(gapTimer);
+    try{ synth.cancel(); }catch(e){}
+    // small delay lets iOS clear its queue before accepting a new utterance
+    setTimeout(()=>{
+      if(!playing || mySeq!==seq) return;
+      const u=new SpeechSynthesisUtterance(item.text);
+      u.rate=rate; u.pitch=1; u.volume=1;
+      if(voice) u.voice=voice;
+      u.onend=()=>{
+        if(!playing || mySeq!==seq) return;
+        const gap = item.kind==='q' ? 1000 : 300;
+        gapTimer=setTimeout(()=>{
+          if(!playing || mySeq!==seq) return;
+          pos++; speakCurrent();
+        }, gap);
+      };
+      u.onerror=()=>{
+        if(!playing || mySeq!==seq) return;
+        gapTimer=setTimeout(()=>{ if(playing && mySeq===seq){ pos++; speakCurrent(); } },250);
+      };
+      current=u;
+      updateNow(item);
+      try{ synth.speak(u); }catch(e){}
+    }, 80);
+  }
+  function restartCurrent(){ speakCurrent(); }
+
+  /* iOS/Chrome can pause long speech; a periodic resume keeps it alive */
+  function startKeepAlive(){
+    stopKeepAlive();
+    keepAlive=setInterval(()=>{
+      if(!playing || !supported) return;
+      try{ if(synth.paused) synth.resume(); }catch(e){}
+    }, 4000);
+  }
+  function stopKeepAlive(){ if(keepAlive){clearInterval(keepAlive); keepAlive=null;} }
+
+  function start(list){
+    if(!supported){ alert('Your browser does not support in-app audio. You can use your phone\u2019s built-in Read Aloud instead.'); return; }
+    loadVoices();
+    stop(true);
+    queue=list; pos=0; playing=true;
+    showBar(true); startKeepAlive();
+    // prime iOS audio with a silent utterance on the same user gesture
+    try{ const p=new SpeechSynthesisUtterance(' '); p.volume=0; synth.speak(p); }catch(e){}
+    speakCurrent();
+    syncButtons();
+  }
+  function startTopic(topic){ start(buildTopicQueue(topic)); }
+  function startAll(){ let all=[]; TOPICS.forEach(t=>{ all=all.concat(buildTopicQueue(t)); }); start(all); }
+
+  function toggle(){
+    if(!supported || !queue.length) return;
+    if(playing){
+      playing=false; seq++; clearTimeout(gapTimer);
+      try{ synth.cancel(); }catch(e){}
+      stopKeepAlive();
+    } else {
+      playing=true; startKeepAlive(); speakCurrent();
+    }
+    syncButtons();
+  }
+  function jump(delta){
+    if(!supported || !queue.length) return;
+    seq++; clearTimeout(gapTimer);
+    try{ synth.cancel(); }catch(e){}
+    pos = Math.min(Math.max(pos+delta,0), queue.length-1);
+    playing=true; startKeepAlive();
+    speakCurrent(); syncButtons();
+  }
+  function next(){ jump(1); }
+  function prev(){ jump(-1); }
+
+  function cycleSpeed(){
+    let i=rates.indexOf(rate); if(i<0)i=2;
+    rate=rates[(i+1)%rates.length];
+    try{ localStorage.setItem(RATE_KEY,String(rate)); }catch(e){}
+    const sb=document.getElementById('auSpeed'); if(sb) sb.textContent=rate.toFixed(1)+'\u00d7';
+    if(playing) restartCurrent();
   }
 
   function updateNow(item){
     const el=document.getElementById('auNow'); if(!el) return;
-    const total=queue.length;
-    let label = item.kind==='chapter' ? ('▶ '+item.text)
-              : (item.topicTitle+' — '+(item.kind==='q'?'Question':'Answer'));
-    el.textContent=label;
-    const pb=document.getElementById('auPlay'); if(pb) pb.textContent = playing?'⏸':'▶';
+    const n=queue.length?(pos+1):0;
+    el.textContent = (item.kind==='chapter' ? item.text
+      : (item.topicTitle+' \u2014 '+(item.kind==='q'?'Question':'Answer')))
+      + '   ('+n+'/'+queue.length+')';
   }
-
-  function toggle(){
-    if(!supported) return;
-    if(playing){ playing=false; window.speechSynthesis.cancel(); }
-    else { playing=true; speakCurrent(); }
-    const pb=document.getElementById('auPlay'); if(pb) pb.textContent = playing?'⏸':'▶';
-  }
-  function next(){ if(!queue.length) return; window.speechSynthesis.cancel(); pos=Math.min(pos+1,queue.length-1); if(!playing){playing=true;} speakCurrent(); }
-  function prev(){ if(!queue.length) return; window.speechSynthesis.cancel(); pos=Math.max(pos-1,0); if(!playing){playing=true;} speakCurrent(); }
-  function cycleSpeed(){
-    let idx=rates.indexOf(rate); idx=(idx+1)%rates.length; rate=rates[idx];
-    const sb=document.getElementById('auSpeed'); if(sb) sb.textContent=rate.toFixed(1)+'×';
-    if(playing){ window.speechSynthesis.cancel(); speakCurrent(); }
+  function syncButtons(){
+    const pb=document.getElementById('auPlay'); if(pb) pb.textContent = playing?'\u23f8':'\u25b6';
+    const sb=document.getElementById('auSpeed'); if(sb) sb.textContent=rate.toFixed(1)+'\u00d7';
   }
   function finish(){
-    playing=false;
-    const el=document.getElementById('auNow'); if(el) el.textContent='Finished ✓';
-    const pb=document.getElementById('auPlay'); if(pb) pb.textContent='▶';
+    playing=false; stopKeepAlive();
+    const el=document.getElementById('auNow'); if(el) el.textContent='Finished \u2713';
+    syncButtons();
   }
-  function stop(){
-    playing=false;
-    if(supported) window.speechSynthesis.cancel();
-    showBar(false);
+  function stop(quiet){
+    playing=false; seq++; clearTimeout(gapTimer); stopKeepAlive();
+    if(supported){ try{ synth.cancel(); }catch(e){} }
+    if(!quiet) showBar(false);
+    syncButtons();
   }
   function showBar(on){
     const bar=document.getElementById('audioBar'); if(bar) bar.classList.toggle('show',on);
   }
 
-  return {supported, startTopic, startAll, toggle, next, prev, cycleSpeed, stop};
+  return {supported, startTopic, startAll, toggle, next, prev, cycleSpeed, stop, setVoiceByName, loadVoices};
 })();
 
 // Wire audio buttons
@@ -2019,7 +2120,8 @@ const AUDIO = (function(){
   const pv=document.getElementById('auPrev'); if(pv) pv.onclick=()=>AUDIO.prev();
   const sp=document.getElementById('auSpeed'); if(sp) sp.onclick=()=>AUDIO.cycleSpeed();
   const cl=document.getElementById('auClose'); if(cl) cl.onclick=()=>AUDIO.stop();
-  // stop speech if the page is hidden/closed to avoid runaway audio
+  const vsel=document.getElementById('auVoice');
+  if(vsel){ vsel.onchange=e=>AUDIO.setVoiceByName(e.target.value); vsel.onfocus=()=>AUDIO.loadVoices(); }
   window.addEventListener('pagehide',()=>AUDIO.stop());
 })();
 
@@ -2044,6 +2146,7 @@ if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
     <button id="auNext" aria-label="Next">⏭</button>
     <button class="spd" id="auSpeed" aria-label="Speed">1.0×</button>
   </div>
+  <div class="voicerow"><label for="auVoice">Voice</label><select id="auVoice"></select></div>
 </div>
 </body>
 </html>
