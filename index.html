@@ -344,6 +344,19 @@
   <button class="tab" id="tabProg" onclick="goProgress()"><span class="ic">◔</span><span class="lb">Progress</span></button>
 </div>
 
+<!-- audio player (global, outside screens) -->
+<div class="audiobar" id="audioBar">
+  <button class="close" id="auClose" aria-label="Stop">✕</button>
+  <div class="now" id="auNow">Ready</div>
+  <div class="ctl">
+    <button id="auPrev" aria-label="Previous">⏮</button>
+    <button class="big" id="auPlay" aria-label="Play or pause">⏸</button>
+    <button id="auNext" aria-label="Next">⏭</button>
+    <button class="spd" id="auSpeed" aria-label="Speed">1.0×</button>
+  </div>
+  <div class="voicerow"><label for="auVoice">Voice</label><select id="auVoice"></select></div>
+</div>
+
 <!-- ===================== PROGRESS ===================== -->
 <div class="screen hidden" id="progress">
   <h2 class="screenttl">Your progress</h2>
@@ -2111,8 +2124,8 @@ const AUDIO = (function(){
   return {supported, startTopic, startAll, toggle, next, prev, cycleSpeed, stop, setVoiceByName, loadVoices};
 })();
 
-// Wire audio buttons
-(function(){
+// Wire audio buttons (DOM-ready guarded)
+function wireAudioUI(){
   const g=document.getElementById('listenAllBtn'); if(g) g.onclick=()=>AUDIO.startAll();
   const t=document.getElementById('listenTopicBtn'); if(t) t.onclick=()=>{ if(cur) AUDIO.startTopic(cur); };
   const p=document.getElementById('auPlay'); if(p) p.onclick=()=>AUDIO.toggle();
@@ -2123,7 +2136,10 @@ const AUDIO = (function(){
   const vsel=document.getElementById('auVoice');
   if(vsel){ vsel.onchange=e=>AUDIO.setVoiceByName(e.target.value); vsel.onfocus=()=>AUDIO.loadVoices(); }
   window.addEventListener('pagehide',()=>AUDIO.stop());
-})();
+  if(!p||!nx||!pv||!sp||!vsel){ console.warn('NDT audio: some controls not found'); }
+}
+if(document.readyState==='loading'){ document.addEventListener('DOMContentLoaded',wireAudioUI); }
+else { wireAudioUI(); }
 
 
 goHome();
@@ -2137,16 +2153,6 @@ if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
   });
 }
 </script>
-<div class="audiobar" id="audioBar">
-  <button class="close" id="auClose" aria-label="Stop">✕</button>
-  <div class="now" id="auNow">Ready</div>
-  <div class="ctl">
-    <button id="auPrev" aria-label="Previous">⏮</button>
-    <button class="big" id="auPlay" aria-label="Play or pause">⏸</button>
-    <button id="auNext" aria-label="Next">⏭</button>
-    <button class="spd" id="auSpeed" aria-label="Speed">1.0×</button>
-  </div>
-  <div class="voicerow"><label for="auVoice">Voice</label><select id="auVoice"></select></div>
-</div>
+
 </body>
 </html>
